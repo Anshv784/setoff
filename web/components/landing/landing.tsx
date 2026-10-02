@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useMotionValueEvent, useScroll } from "motion/react";
 import { BILLS, CITIES, FLOWS, GROSS, heroProgress, NET, smooth } from "./story";
+import { ArcSection, BuiltOn, Faq, Product, WhoFor } from "./sections";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, FileSignature, Layers, Wallet } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ExternalLink } from "lucide-react";
 import { net } from "@/lib/config";
 import { loadSnapshot, savedBps, totals } from "@/lib/data";
 import { fmtAmount, fmtPct } from "@/lib/format";
@@ -24,10 +25,12 @@ export function Landing() {
       <SiteNav />
       <main>
         <Hero />
-        <Idea />
-        <Steps />
+        <BuiltOn />
+        <WhoFor />
+        <Product />
         <LiveNumbers />
-        <Arc />
+        <ArcSection />
+        <Faq />
         <Cta />
       </main>
       <SiteFooter />
@@ -101,8 +104,25 @@ function Hero() {
 /** Live readout of the globe: the 18 bills on screen, and what one Setoff cycle reduces them to. */
 function CycleCard({ bills, moved, settled }: { bills: number; moved: number; settled: number }) {
   const done = settled > 0.98;
+  const phase = done ? 2 : settled > 0.02 ? 1 : 0;
   return (
-    <div className="mt-2 grid w-full max-w-md grid-cols-3 gap-px overflow-hidden rounded-xl border border-border bg-border text-sm" aria-live="polite">
+    <div className="mt-2 flex w-full max-w-md flex-col gap-3">
+    <ol className="flex items-center gap-2 text-xs" aria-label="Cycle progress">
+      {["Bills", "Netting", "Settled"].map((label, i) => (
+        <li key={label} className="flex items-center gap-2">
+          <span
+            className={`grid size-5 place-items-center rounded-full border font-mono text-[10px] transition-colors duration-300 ${
+              i < phase ? "border-primary bg-primary text-primary-foreground" : i === phase ? "border-primary text-primary" : "border-border text-muted-foreground"
+            }`}
+          >
+            {i + 1}
+          </span>
+          <span className={i === phase ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+          {i < 2 && <span className={`h-px w-6 transition-colors duration-300 ${i < phase ? "bg-primary" : "bg-border"}`} aria-hidden />}
+        </li>
+      ))}
+    </ol>
+    <div className="grid w-full grid-cols-3 gap-px overflow-hidden rounded-xl border border-border bg-border text-sm" aria-live="polite">
       <div className="flex flex-col gap-1 bg-card/80 p-4 backdrop-blur">
         <span className="text-xs text-muted-foreground">{done ? "Transfers" : "Bills"}</span>
         <span className="font-mono text-2xl tabular-nums">{bills}</span>
@@ -123,105 +143,7 @@ function CycleCard({ bills, moved, settled }: { bills: number; moved: number; se
             : `${BILLS.length} bills between ${CITIES.length} cities, each paid on its own.`}
       </p>
     </div>
-  );
-}
-
-function Section({ id, eyebrow, title, children }: { id?: string; eyebrow: string; title: string; children: React.ReactNode }) {
-  return (
-    <section id={id} className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-20 md:px-6 md:py-28">
-      <Reveal className="mb-12 flex max-w-2xl flex-col gap-3">
-        <p className="text-sm font-medium text-primary">{eyebrow}</p>
-        <h2 className="text-3xl font-semibold tracking-tight text-balance md:text-5xl">{title}</h2>
-      </Reveal>
-      {children}
-    </section>
-  );
-}
-
-function Idea() {
-  const bills = [
-    ["Studio", "Agency", "10"],
-    ["Agency", "Printer", "9"],
-    ["Printer", "Studio", "8"],
-  ];
-  return (
-    <Section eyebrow="The idea" title="Most of what businesses owe each other cancels out.">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Reveal className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-8">
-          <p className="text-sm text-muted-foreground">Paid one by one</p>
-          <ul className="flex flex-col gap-3">
-            {bills.map(([from, to, amt]) => (
-              <li key={from} className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm">
-                <span>
-                  {from} <span className="text-muted-foreground">→</span> {to}
-                </span>
-                <span className="font-mono tabular-nums">{amt} USDC</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-auto font-mono text-3xl tabular-nums">
-            27 <span className="font-sans text-base text-muted-foreground">USDC moved · 3 payments</span>
-          </p>
-        </Reveal>
-        <Reveal delay={0.1} className="flex flex-col gap-6 rounded-2xl border border-primary/40 bg-[color-mix(in_oklch,var(--primary)_8%,var(--card))] p-8">
-          <p className="text-sm text-muted-foreground">Through Setoff</p>
-          <div className="flex flex-col gap-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border border-primary/40 px-4 py-3">
-              <span>
-                Studio <span className="text-muted-foreground">funds its net</span>
-              </span>
-              <span className="font-mono tabular-nums">2 USDC</span>
-            </div>
-            <p className="px-1 leading-6 text-muted-foreground">
-              All three bills are discharged in the same transaction. Agency and Printer are each left 1 USDC ahead.
-            </p>
-          </div>
-          <p className="mt-auto font-mono text-3xl tabular-nums text-primary">
-            2 <span className="font-sans text-base text-muted-foreground">USDC moved · 1 cycle</span>
-          </p>
-        </Reveal>
-      </div>
-    </Section>
-  );
-}
-
-function Steps() {
-  const steps = [
-    {
-      icon: FileSignature,
-      title: "Send an invoice",
-      body: "Bill anyone with a link. They approve it with a free signature — no gas, no setup.",
-    },
-    {
-      icon: Wallet,
-      title: "Fund only your net",
-      body: "Owe 10 and owed 8? Deposit 2. Setoff tells you the exact amount.",
-    },
-    {
-      icon: Layers,
-      title: "One cycle settles all",
-      body: "Every bill clears at once. The contract checks every position; nobody can move your money.",
-    },
-  ];
-  return (
-    <Section id="how" eyebrow="How it works" title="Three steps. No intermediaries.">
-      <ol className="grid gap-4 md:grid-cols-3">
-        {steps.map((s, i) => (
-          <Reveal key={s.title} delay={i * 0.08}>
-            <li className="flex h-full flex-col gap-5 rounded-2xl border border-border bg-card p-8">
-              <div className="flex items-center justify-between">
-                <span className="grid size-11 place-items-center rounded-xl bg-primary/15 text-primary">
-                  <s.icon className="size-5" aria-hidden />
-                </span>
-                <span className="font-mono text-sm text-muted-foreground">0{i + 1}</span>
-              </div>
-              <h3 className="text-xl font-medium">{s.title}</h3>
-              <p className="leading-7 text-muted-foreground">{s.body}</p>
-            </li>
-          </Reveal>
-        ))}
-      </ol>
-    </Section>
+    </div>
   );
 }
 
@@ -252,35 +174,26 @@ function LiveNumbers() {
         {stats
           ? stats.map(([v, l], i) => (
               <Reveal key={l} delay={i * 0.06} className="flex flex-col gap-2">
-                <span className="font-mono text-4xl tabular-nums md:text-5xl">{v}</span>
+                <span className="text-4xl font-semibold tracking-tight tabular-nums md:text-5xl">{v}</span>
                 <span className="text-sm text-muted-foreground">{l}</span>
               </Reveal>
             ))
           : Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-20" />)}
-        <p className="col-span-full text-xs text-muted-foreground">Read live from the Setoff contract on {net.name}.</p>
+        <p className="col-span-full flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          Read live from the Setoff contract on {net.name}.
+          {!net.local && (
+            <a
+              href={`${net.explorer}/address/${net.setoff}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              View the contract <ExternalLink className="size-3" aria-hidden />
+            </a>
+          )}
+        </p>
       </div>
     </section>
-  );
-}
-
-function Arc() {
-  const items = [
-    ["USDC as gas", "One asset for fees and settlement. A full cycle costs about a cent."],
-    ["Final in under a second", "Cycles clear in minutes, not days, and are final once included."],
-    ["Memo", "Invoice notes and cycle summaries are recorded onchain with every transaction."],
-    ["ERC-8004 identity", "Counterparties show up by name, verified against Arc's identity registry."],
-  ];
-  return (
-    <Section id="arc" eyebrow="Built on Arc" title="A clearinghouse that only makes sense on a stablecoin chain.">
-      <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
-        {items.map(([t, b], i) => (
-          <Reveal key={t} delay={i * 0.05} className="flex flex-col gap-2 bg-background p-8">
-            <h3 className="text-lg font-medium">{t}</h3>
-            <p className="leading-7 text-muted-foreground">{b}</p>
-          </Reveal>
-        ))}
-      </div>
-    </Section>
   );
 }
 
