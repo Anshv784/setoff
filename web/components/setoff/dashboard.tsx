@@ -18,6 +18,7 @@ import { Cycles } from "./cycles";
 import { Pool } from "./pool";
 import { Account } from "./account";
 import { HowItWorks } from "./how-it-works";
+import { NetworkView } from "./network";
 
 const REFRESH_MS = 20_000;
 export const REPO = "https://github.com/Anshv784/setoff";
@@ -104,6 +105,16 @@ export function Dashboard() {
         ) : (
           <StatsSkeleton />
         )}
+
+        <section aria-labelledby="graph" className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <h2 id="graph" className="text-xl font-semibold">
+              Who owes whom
+            </h2>
+            <p className="text-sm text-muted-foreground">Every bill as its own payment, versus only the net through Setoff.</p>
+          </div>
+          {snapshot ? <NetworkView snapshot={snapshot} /> : <Skeleton className="h-96 w-full" />}
+        </section>
 
         <HowItWorks />
 

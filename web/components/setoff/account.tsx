@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isAddress, parseUnits, type Address } from "viem";
+import { formatUnits, isAddress, parseUnits, type Address } from "viem";
 import { BadgeCheck, Wallet } from "lucide-react";
 import { identities, net, tokenSymbol } from "@/lib/config";
 import type { IOURow, Snapshot } from "@/lib/data";
@@ -90,6 +90,13 @@ export function Account({
             </li>
           ))}
         </ul>
+        <NetHint
+          account={account}
+          snapshot={snapshot}
+          bals={bals}
+          busy={!!busy}
+          onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
+        />
         <DepositForm tokens={snapshot.tokens} busy={!!busy} onSubmit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))} />
       </section>
 
@@ -246,6 +253,64 @@ function IOUForm({
         Record IOU
       </Button>
     </form>
+  );
+}
+
+/** What the user owes and is owed across open IOUs, and what to deposit so the next cycle can clear them. */
+function NetHint({
+  account,
+  snapshot,
+  bals,
+  busy,
+  onDeposit,
+}: {
+  account: Address;
+  snapshot: Snapshot;
+  bals?: Bal;
+  busy: boolean;
+  onDeposit: (token: Address, amount: string) => void;
+}) {
+  const me = account.toLowerCase();
+  const rows = snapshot.tokens
+    .map((token) => {
+      const open = snapshot.ious.filter((i) => i.status === "pending" && i.token.toLowerCase() === token.toLowerCase());
+      const owe = open.filter((i) => i.debtor.toLowerCase() === me).reduce((s, i) => s + i.amount, 0n);
+      const owed = open.filter((i) => i.creditor.toLowerCase() === me).reduce((s, i) => s + i.amount, 0n);
+      const deposit = bals?.find((b) => b.token === token)?.deposit;
+      const net = owed - owe;
+      const needed = deposit === undefined || net >= 0n ? 0n : -net > deposit ? -net - deposit : 0n;
+      return { token, owe, owed, net, deposit, needed };
+    })
+    .filter((r) => r.owe > 0n || r.owed > 0n);
+
+  if (rows.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-3 rounded-md bg-muted p-4">
+      <p className="text-sm font-medium">For the next cycle</p>
+      {rows.map((r) => (
+        <div key={r.token} className="flex flex-col gap-2">
+          <p className="text-sm text-muted-foreground">
+            You owe <span className="font-mono text-foreground">{fmtToken(r.owe, r.token)}</span>, you&apos;re owed{" "}
+            <span className="font-mono text-foreground">{fmtToken(r.owed, r.token)}</span>.{" "}
+            {r.net >= 0n ? (
+              <>You&apos;re a net creditor, so there&apos;s nothing to deposit.</>
+            ) : r.needed > 0n ? (
+              <>
+                Your net is <span className="font-mono text-foreground">{fmtToken(-r.net, r.token)}</span>; deposit{" "}
+                <span className="font-mono text-foreground">{fmtToken(r.needed, r.token)}</span> more to clear it.
+              </>
+            ) : (
+              <>Your deposit already covers your net of {fmtToken(-r.net, r.token)}.</>
+            )}
+          </p>
+          {r.needed > 0n && (
+            <Button className="self-start" disabled={busy} onClick={() => onDeposit(r.token, formatUnits(r.needed, 6))}>
+              Deposit {fmtToken(r.needed, r.token)}
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
