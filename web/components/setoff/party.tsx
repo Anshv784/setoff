@@ -4,6 +4,14 @@ import { shortAddr } from "@/lib/format";
 /** An address, with its demo role when known, linking to the explorer. */
 export function Party({ address }: { address: string }) {
   const label = labelOf(address);
+  if (net.local) {
+    return (
+      <span className="inline-flex flex-col leading-tight">
+        {label && <span className="text-sm">{label}</span>}
+        <span className="font-mono text-xs text-muted-foreground">{shortAddr(address)}</span>
+      </span>
+    );
+  }
   return (
     <a
       href={`${net.explorer}/address/${address}`}
@@ -18,6 +26,7 @@ export function Party({ address }: { address: string }) {
 }
 
 export function TxLink({ hash, children }: { hash: string; children?: React.ReactNode }) {
+  if (net.local) return <span className="font-mono text-xs text-muted-foreground">{shortAddr(hash)}</span>;
   return (
     <a
       href={`${net.explorer}/tx/${hash}`}

@@ -46,9 +46,15 @@ export function Dashboard() {
           <Badge variant="outline">{net.name}</Badge>
         </div>
         <nav className="flex items-center gap-1 text-sm">
-          <a className={buttonVariants({ variant: "ghost" })} href={`${net.explorer}/address/${net.setoff}`} target="_blank" rel="noreferrer">
-            Contract <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{shortAddr(net.setoff)}</span>
-          </a>
+          {net.local ? (
+            <span className={buttonVariants({ variant: "ghost" })}>
+              Contract <span className="font-mono text-xs text-muted-foreground">{shortAddr(net.setoff)}</span>
+            </span>
+          ) : (
+            <a className={buttonVariants({ variant: "ghost" })} href={`${net.explorer}/address/${net.setoff}`} target="_blank" rel="noreferrer">
+              Contract <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{shortAddr(net.setoff)}</span>
+            </a>
+          )}
           <a className={buttonVariants({ variant: "ghost" })} href={REPO} target="_blank" rel="noreferrer">
             Source
           </a>

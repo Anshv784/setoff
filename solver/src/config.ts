@@ -14,7 +14,18 @@ export type Network = {
   eurc: Address;
 };
 
+// A local arc-anvil fork of Arc Testnet: real USDC/EURC/Memo/Multicall3From, free funds.
+const local: Network = {
+  chain: defineChain({ ...arcTestnet, rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } } }),
+  rpc: "http://127.0.0.1:8545",
+  explorer: "https://explorer.testnet.arc.io",
+  setoff: (process.env.SETOFF_ADDRESS ?? "0x0000000000000000000000000000000000000000") as Address,
+  deployBlock: BigInt(process.env.SETOFF_DEPLOY_BLOCK ?? "0"),
+  eurc: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+};
+
 export const networks = {
+  local,
   testnet: {
     // viem's arcTestnet still lists the old arc.network hosts.
     chain: defineChain({ ...arcTestnet, rpcUrls: { default: { http: ["https://rpc.testnet.arc.io"] } } }),
