@@ -3,14 +3,13 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Wallet } from "lucide-react";
-import { labelOf, net } from "@/lib/config";
-import { shortAddr } from "@/lib/format";
+import { net } from "@/lib/config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/site/brand";
 import { InvoiceView } from "@/components/setoff/invoice";
 import { AppProvider, useApp } from "./state";
+import { ConnectDialog, WalletButton } from "./wallet-ui";
 
 export const APP_LINKS = [
   { href: "/app", label: "Overview" },
@@ -24,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AppProvider>
       <AppNav />
+      <ConnectDialog />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-10 md:px-6">
         <Suspense>
           <InvoiceGate />
@@ -37,7 +37,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function AppNav() {
   const pathname = usePathname();
-  const { account, connect } = useApp();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 4);
@@ -45,7 +44,6 @@ function AppNav() {
     window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
-  const name = account ? labelOf(account)?.name : undefined;
 
   return (
     <header
@@ -60,19 +58,7 @@ function AppNav() {
           <Badge variant="outline" className="hidden sm:inline-flex">
             {net.name}
           </Badge>
-          {account ? (
-            <Link
-              href="/app/wallet"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span className="size-2 rounded-full bg-primary" aria-hidden />
-              {name ?? <span className="font-mono text-xs">{shortAddr(account)}</span>}
-            </Link>
-          ) : (
-            <Button onClick={connect}>
-              <Wallet aria-hidden /> Connect wallet
-            </Button>
-          )}
+          <WalletButton />
         </div>
       </div>
       {/* Phones: the same links as a scrollable row. */}

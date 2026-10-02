@@ -60,12 +60,39 @@ export function hasWallet() {
   return typeof window !== "undefined" && !!window.ethereum;
 }
 
+/** The wallet the user picked in the connect dialog; falls back to the injected default. */
+let selected: EIP1193Provider | undefined;
+export const setProvider = (p: EIP1193Provider | undefined) => {
+  selected = p;
+};
+export const currentProvider = () => selected ?? (typeof window !== "undefined" ? window.ethereum : undefined);
+
 function provider() {
-  if (!window.ethereum) throw new Error("No wallet found. Install MetaMask or another browser wallet.");
-  return window.ethereum;
+  const p = currentProvider();
+  if (!p) throw new Error("No wallet found. Install MetaMask or another browser wallet.");
+  return p;
 }
 
-async function ensureChain() {
+export async function chainId(): Promise<number> {
+  return Number(await provider().request({ method: "eth_chainId" }));
+}
+
+/** Already-authorised account, without prompting (for reconnect on reload). */
+export async function silentAccount(p: EIP1193Provider): Promise<Address | undefined> {
+  const accounts = (await p.request({ method: "eth_accounts" })) as Address[];
+  return accounts[0];
+}
+
+/** Best effort: wallets that support it forget this site's permission. */
+export async function revoke() {
+  try {
+    await provider().request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] } as never);
+  } catch {
+    // Not supported everywhere; local disconnect still applies.
+  }
+}
+
+export async function ensureChain() {
   const p = provider();
   const id = numberToHex(net.chain.id);
   try {
