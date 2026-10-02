@@ -6,16 +6,30 @@ import { Reveal } from "@/components/site/motion";
 /* ---------------------------------------------------------------- built on */
 
 export function BuiltOn() {
-  const items = ["Arc", "USDC", "EURC", "Memo", "ERC-8004"];
   return (
     <section aria-label="Built on" className="border-y border-border bg-card/30">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-4 py-6 text-sm text-muted-foreground md:justify-between md:px-6">
-        <span className="text-xs uppercase tracking-[0.18em]">Built on</span>
-        {items.map((i) => (
-          <span key={i} className="font-medium tracking-tight text-foreground/80">
-            {i}
-          </span>
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-14 gap-y-5 px-4 py-8 md:px-6">
+        <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Built on</span>
+        {/* eslint-disable @next/next/no-img-element -- static SVG brand marks, no optimisation needed */}
+        <a href="https://arc.io" target="_blank" rel="noreferrer" className="opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+          <img src="/logos/arc.svg" alt="Arc" className="h-7 w-auto" />
+        </a>
+        {[
+          ["usdc", "USDC", "https://www.circle.com/usdc"],
+          ["eurc", "EURC", "https://www.circle.com/eurc"],
+        ].map(([file, name, href]) => (
+          <a
+            key={file}
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-sm text-lg font-semibold tracking-tight text-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <img src={`/logos/${file}.svg`} alt="" className="size-8" />
+            {name}
+          </a>
         ))}
+        {/* eslint-enable @next/next/no-img-element */}
       </div>
     </section>
   );

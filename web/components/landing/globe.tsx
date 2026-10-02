@@ -36,6 +36,7 @@ const landFragment = /* glsl */ `
   uniform vec3 uA;
   uniform vec3 uB;
   uniform float uTime;
+  uniform float uDim;
   varying float vSeed;
   varying float vFacing;
   void main() {
@@ -47,7 +48,7 @@ const landFragment = /* glsl */ `
     // Brighter toward the viewer, fading at the limb for depth.
     float light = smoothstep(-0.1, 0.9, vFacing);
     vec3 col = mix(uA, uB, vSeed * 0.6 + light * 0.4);
-    gl_FragColor = vec4(col, edge * twinkle * (0.25 + 0.75 * light));
+    gl_FragColor = vec4(col, edge * twinkle * (0.25 + 0.75 * light) * uDim);
   }`;
 
 function Continents() {
@@ -69,11 +70,14 @@ function Continents() {
     return g;
   }, []);
   const uniforms = useMemo(
-    () => ({ uTime: { value: 0 }, uPixel: { value: 3.2 * Math.min(2, window.devicePixelRatio || 1) }, uA: { value: LAND_A }, uB: { value: LAND_B } }),
+    () => ({ uTime: { value: 0 }, uDim: { value: 1 }, uPixel: { value: 3.2 * Math.min(2, window.devicePixelRatio || 1) }, uA: { value: LAND_A }, uB: { value: LAND_B } }),
     [],
   );
   useFrame((_, dt) => {
-    if (mat.current) mat.current.uniforms.uTime!.value += dt;
+    if (!mat.current) return;
+    mat.current.uniforms.uTime!.value += dt;
+    // Once settled, the map steps back so the net transfers stand out.
+    mat.current.uniforms.uDim!.value = 1 - 0.5 * smooth(0.55, 0.85, heroProgress.current);
   });
   return (
     <points geometry={geometry}>
@@ -130,11 +134,12 @@ function Payments({ reduce }: { reduce: boolean }) {
       kind: "net" as const,
       speed: 0.3,
       phase: i * 0.33,
-      radius: 0.0055,
+      radius: 0.0075,
     }));
     return [...bills, ...nets];
   }, []);
   const mats = useRef<(THREE.ShaderMaterial | null)[]>([]);
+  const meshes = useRef<(THREE.Mesh | null)[]>([]);
   const time = useRef(0);
 
   useFrame((_, dt) => {
@@ -147,13 +152,28 @@ function Payments({ reduce }: { reduce: boolean }) {
       if (!m) return;
       m.uniforms.uHead!.value = reduce ? 0.85 : ((time.current * arc.speed + arc.phase) % 1.35);
       m.uniforms.uOpacity!.value = arc.kind === "bill" ? 0.9 * billsOut : netsIn;
+      const mesh = meshes.current[i];
+      if (arc.kind === "bill") {
+        // Netting: each bill shifts to the brand blue and collapses into the surface.
+        const t = smooth(0.3, 0.62, p);
+        (m.uniforms.uColor!.value as THREE.Color).copy(ICE).lerp(ACCENT, t);
+        mesh?.scale.setScalar(1 - 0.012 * t);
+      } else {
+        m.uniforms.uBase!.value = 0.35 + 0.35 * smooth(0.65, 0.9, p);
+        mesh?.scale.setScalar(0.99 + 0.01 * netsIn);
+      }
     });
   });
 
   return (
     <>
       {arcs.map((arc, i) => (
-        <mesh key={i}>
+        <mesh
+          key={i}
+          ref={(el) => {
+            meshes.current[i] = el;
+          }}
+        >
           <tubeGeometry args={[arc.curve, 64, arc.radius, 6, false]} />
           <shaderMaterial
             ref={(m) => {
@@ -162,7 +182,7 @@ function Payments({ reduce }: { reduce: boolean }) {
             vertexShader={arcVertex}
             fragmentShader={arcFragment}
             uniforms={{
-              uColor: { value: arc.kind === "net" ? ACCENT : ICE },
+              uColor: { value: (arc.kind === "net" ? ACCENT : ICE).clone() },
               uHead: { value: 0 },
               uOpacity: { value: arc.kind === "net" ? 0 : 0.9 },
               uBase: { value: arc.kind === "net" ? 0.35 : 0.2 },
@@ -214,7 +234,7 @@ function Cities() {
       if (h) {
         const base = involved ? 0.11 + 0.05 * settled : 0.09 * (1 - settled * 0.5);
         h.scale.setScalar(base + 0.015 * Math.sin(state.clock.elapsedTime * 2 + i));
-        (h.material as THREE.SpriteMaterial).opacity = involved ? 0.7 + 0.3 * settled : 0.7 - 0.35 * settled;
+        (h.material as THREE.SpriteMaterial).opacity = involved ? 0.7 + 0.3 * settled : 0.7 * (1 - settled);
       }
       const r = rings.current[i];
       if (r) {
@@ -261,7 +281,7 @@ function Cities() {
 // ---------------------------------------------------------------------- globe
 
 const atmosphere = {
-  uniforms: { uColor: { value: ACCENT } },
+  uniforms: { uColor: { value: ACCENT }, uIntensity: { value: 0.75 } },
   vertexShader: /* glsl */ `
     varying vec3 vNormal;
     void main() {
@@ -270,10 +290,11 @@ const atmosphere = {
     }`,
   fragmentShader: /* glsl */ `
     uniform vec3 uColor;
+    uniform float uIntensity;
     varying vec3 vNormal;
     void main() {
       float rim = pow(clamp(0.62 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 2.4);
-      gl_FragColor = vec4(uColor, 1.0) * rim * 0.75;
+      gl_FragColor = vec4(uColor, 1.0) * rim * uIntensity;
     }`,
 };
 
@@ -295,29 +316,66 @@ const ocean = {
     }`,
 };
 
-function Globe({ reduce }: { reduce: boolean }) {
-  const group = useRef<THREE.Group>(null);
-  useFrame((state, dt) => {
-    if (!group.current) return;
-    if (!reduce) group.current.rotation.y += dt * 0.045;
-    const tx = 0.38 + state.pointer.y * 0.05;
-    group.current.rotation.x += (tx - group.current.rotation.x) * 0.04;
+/** A ring that sweeps out from the globe at the moment the cycle settles. */
+function Shockwave() {
+  const ring = useRef<THREE.Mesh>(null);
+  useFrame(() => {
+    if (!ring.current) return;
+    const t = smooth(0.4, 0.66, heroProgress.current);
+    const live = t > 0 && t < 1;
+    ring.current.visible = live;
+    ring.current.scale.setScalar(1.04 + t * 0.32);
+    (ring.current.material as THREE.MeshBasicMaterial).opacity = live ? 0.55 * (1 - t) : 0;
   });
   return (
-    // Start facing Europe/Africa/Asia, where most of the bills are.
-    <group ref={group} rotation={[0.38, -2.25, 0]}>
-      <mesh>
-        <sphereGeometry args={[0.995, 96, 96]} />
-        <shaderMaterial {...ocean} />
-      </mesh>
-      <Continents />
-      <Cities />
-      <Payments reduce={reduce} />
-      <mesh scale={1.12}>
-        <sphereGeometry args={[1, 64, 64]} />
-        <shaderMaterial args={[atmosphere]} side={THREE.BackSide} blending={THREE.AdditiveBlending} transparent depthWrite={false} />
-      </mesh>
-    </group>
+    <mesh ref={ring}>
+      <ringGeometry args={[0.985, 1, 128]} />
+      <meshBasicMaterial color={ACCENT} transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} />
+    </mesh>
+  );
+}
+
+function Globe({ reduce }: { reduce: boolean }) {
+  const group = useRef<THREE.Group>(null);
+  const atmo = useRef<THREE.ShaderMaterial>(null);
+  const drift = useRef(0);
+  useFrame((state, dt) => {
+    if (!group.current) return;
+    const p = heroProgress.current;
+    if (!reduce) drift.current += dt;
+    // Scrolling turns the globe east, so the end frame centres on the net transfers
+    // (Europe, Africa, Asia). A gentle sway keeps it alive at rest without drifting away.
+    const sway = reduce ? 0 : Math.sin(drift.current * 0.25) * 0.18;
+    const targetY = -2.25 - p * 0.9 + sway;
+    group.current.rotation.y += (targetY - group.current.rotation.y) * 0.08;
+    const tx = 0.38 + state.pointer.y * 0.05 - p * 0.12;
+    group.current.rotation.x += (tx - group.current.rotation.x) * 0.06;
+    // Push in while netting happens, settle back a little after.
+    const z = 3.95 - 0.3 * smooth(0.2, 0.5, p) + 0.15 * smooth(0.6, 0.9, p);
+    state.camera.position.z += (z - state.camera.position.z) * 0.08;
+    if (atmo.current) {
+      const flare = smooth(0.4, 0.52, p) * (1 - smooth(0.58, 0.8, p));
+      atmo.current.uniforms.uIntensity!.value = 0.75 + 0.9 * flare + 0.2 * smooth(0.6, 0.9, p);
+    }
+  });
+  return (
+    <>
+      <Shockwave />
+      {/* Start facing Europe/Africa/Asia, where most of the bills are. */}
+      <group ref={group} rotation={[0.38, -2.25, 0]}>
+        <mesh>
+          <sphereGeometry args={[0.995, 96, 96]} />
+          <shaderMaterial {...ocean} />
+        </mesh>
+        <Continents />
+        <Cities />
+        <Payments reduce={reduce} />
+        <mesh scale={1.12}>
+          <sphereGeometry args={[1, 64, 64]} />
+          <shaderMaterial ref={atmo} args={[atmosphere]} side={THREE.BackSide} blending={THREE.AdditiveBlending} transparent depthWrite={false} />
+        </mesh>
+      </group>
+    </>
   );
 }
 
