@@ -67,53 +67,76 @@ export function Account({
   const mine = (i: IOURow) => [i.debtor, i.creditor].some((a) => a.toLowerCase() === account.toLowerCase());
   const myIous = snapshot.ious.filter(mine);
 
+  const card = "flex flex-col gap-5 rounded-xl border border-border bg-card p-6";
+
   if (part === "wallet") {
     return (
-      <section aria-labelledby="bal" className="flex max-w-2xl flex-col gap-4 rounded-lg border p-6">
-        <div className="flex items-baseline justify-between gap-2">
-          <h3 id="bal" className="text-base font-medium">
-            Your deposits
-          </h3>
-          <span className="font-mono text-xs text-muted-foreground">{shortAddr(account)}</span>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <section aria-labelledby="bal" className={card}>
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 id="bal" className="text-base font-medium">
+              Your deposits
+            </h2>
+            <span className="font-mono text-xs text-muted-foreground">{shortAddr(account)}</span>
+          </div>
+          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
+            {(bals ?? snapshot.tokens.map((token) => ({ token, deposit: undefined, wallet: undefined }))).map((b) => (
+              <li key={b.token} className="flex items-center justify-between gap-4 p-4">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-muted-foreground">{tokenSymbol(b.token)} in Setoff</span>
+                  <span className="font-mono text-xl tabular-nums">{b.deposit === undefined ? "…" : fmtToken(b.deposit, b.token)}</span>
+                  <span className="text-xs text-muted-foreground">in wallet {b.wallet === undefined ? "…" : fmtToken(b.wallet, b.token)}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={!b.deposit || !!busy}
+                  onClick={() => run(`Withdraw ${tokenSymbol(b.token)}`, () => w.withdraw(account, b.token, b.deposit!))}
+                >
+                  Withdraw all
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <DepositForm tokens={snapshot.tokens} busy={!!busy} onSubmit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))} />
+        </section>
+
+        <div className="flex flex-col gap-6">
+          <section aria-labelledby="next" className={card}>
+            <h2 id="next" className="text-base font-medium">
+              For the next cycle
+            </h2>
+            <NetHint
+              account={account}
+              snapshot={snapshot}
+              bals={bals}
+              busy={!!busy}
+              onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
+            />
+          </section>
+          <section aria-labelledby="name" className={card}>
+            <h2 id="name" className="text-base font-medium">
+              Your name
+            </h2>
+            <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
+          </section>
         </div>
-        <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
-        <ul className="flex flex-col gap-3">
-          {(bals ?? snapshot.tokens.map((token) => ({ token, deposit: undefined, wallet: undefined }))).map((b) => (
-            <li key={b.token} className="flex items-center justify-between gap-4">
-              <div className="flex flex-col">
-                <span className="font-mono text-lg tabular-nums">{b.deposit === undefined ? "…" : fmtToken(b.deposit, b.token)}</span>
-                <span className="text-xs text-muted-foreground">
-                  in wallet {b.wallet === undefined ? "…" : fmtToken(b.wallet, b.token)}
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                disabled={!b.deposit || !!busy}
-                onClick={() => run(`Withdraw ${tokenSymbol(b.token)}`, () => w.withdraw(account, b.token, b.deposit!))}
-              >
-                Withdraw all
-              </Button>
-            </li>
-          ))}
-        </ul>
-        <NetHint
-          account={account}
-          snapshot={snapshot}
-          bals={bals}
-          busy={!!busy}
-          onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
-        />
-        <DepositForm tokens={snapshot.tokens} busy={!!busy} onSubmit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))} />
-      </section>
+      </div>
     );
   }
 
+  const open = myIous.filter((i) => i.status === "pending");
+  const sum = (rows: IOURow[]) => rows.reduce((s, i) => s + i.amount, 0n);
+  const youOwe = open.filter((i) => i.debtor.toLowerCase() === account.toLowerCase() && i.token === snapshot.tokens[0]);
+  const owedYou = open.filter((i) => i.creditor.toLowerCase() === account.toLowerCase() && i.token === snapshot.tokens[0]);
+  const usdc = snapshot.tokens[0]!;
+  const position = sum(owedYou) - sum(youOwe);
+
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <section aria-labelledby="bill" className="flex flex-col gap-4 rounded-lg border p-6">
-        <h3 id="bill" className="text-base font-medium">
+    <div className="grid items-start gap-6 lg:grid-cols-2">
+      <section aria-labelledby="bill" className={card}>
+        <h2 id="bill" className="text-base font-medium">
           Add a bill
-        </h3>
+        </h2>
         <Tabs defaultValue="invoice">
           <TabsList>
             <TabsTrigger value="invoice">Send an invoice</TabsTrigger>
@@ -133,35 +156,60 @@ export function Account({
         </Tabs>
       </section>
 
-      <section aria-labelledby="mine" className="flex flex-col gap-4 lg:col-span-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 id="mine" className="text-base font-medium">
-            Your IOUs
-          </h3>
-          <Button variant="outline" disabled={!myIous.some((i) => i.status === "settled")} onClick={() => exportCsv(account, myIous, snapshot)}>
-            Export reconciliation CSV
+      <section aria-labelledby="mine" className={card}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="mine" className="text-base font-medium">
+            Your bills
+          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!myIous.some((i) => i.status === "settled")}
+            onClick={() => exportCsv(account, myIous, snapshot)}
+          >
+            Export CSV
           </Button>
         </div>
+        <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border text-sm">
+          {[
+            ["You owe", fmtToken(sum(youOwe), usdc), `${youOwe.length} open`],
+            ["Owed to you", fmtToken(sum(owedYou), usdc), `${owedYou.length} open`],
+            ["Your net", `${position > 0n ? "+" : position < 0n ? "−" : ""}${fmtToken(position < 0n ? -position : position, usdc)}`, position < 0n ? "to fund" : position > 0n ? "to receive" : "even"],
+          ].map(([k, v, sub]) => (
+            <div key={k} className="flex flex-col gap-1 bg-card p-3">
+              <dt className="text-xs text-muted-foreground">{k}</dt>
+              <dd className="font-mono text-sm tabular-nums">{v}</dd>
+              <dd className="text-xs text-muted-foreground">{sub}</dd>
+            </div>
+          ))}
+        </dl>
         {myIous.length === 0 ? (
-          <Empty title="Nothing yet" body="IOUs you owe or are owed show up here, with the cycle that settled them." />
+          <div className="flex flex-col gap-1 rounded-lg border border-dashed border-border p-6 text-center">
+            <p className="text-sm font-medium">No bills yet</p>
+            <p className="text-sm text-muted-foreground">Bills you send, owe or settle show up here.</p>
+          </div>
         ) : (
-          <ul className="flex flex-col divide-y rounded-lg border">
+          <ul className="flex max-h-[26rem] flex-col divide-y divide-border overflow-y-auto rounded-lg border border-border">
             {myIous.map((i) => {
               const owe = i.debtor.toLowerCase() === account.toLowerCase();
               return (
-                <li key={i.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground">{owe ? "You owe" : "Owes you"}</span>
+                <li key={i.id} className="flex items-center justify-between gap-3 p-3">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">{owe ? "You owe" : "Owes you"}</span>
                     <Party address={owe ? i.creditor : i.debtor} />
                   </div>
-                  <span className="font-mono tabular-nums">{fmtToken(i.amount, i.token)}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {i.status === "settled" ? `Settled in #${String(i.cycle)}` : i.status === "pending" ? "Open" : i.status}
-                  </span>
-                  {i.status === "pending" && (
-                    <Button variant="ghost" disabled={!!busy} onClick={() => run(owe ? "Cancel IOU" : "Reject IOU", () => w.cancel(account, i.id))}>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="font-mono text-sm tabular-nums">{fmtToken(i.amount, i.token)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {i.status === "settled" ? `Settled · #${String(i.cycle)}` : i.status === "pending" ? "Open" : i.status === "cancelled" ? "Cancelled" : "Expired"}
+                    </span>
+                  </div>
+                  {i.status === "pending" ? (
+                    <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => run(owe ? "Cancel IOU" : "Reject IOU", () => w.cancel(account, i.id))}>
                       {owe ? "Cancel" : "Reject"}
                     </Button>
+                  ) : (
+                    <span className="w-[4.5rem]" aria-hidden />
                   )}
                 </li>
               );
@@ -179,7 +227,7 @@ function DepositForm({ tokens, busy, onSubmit }: { tokens: Address[]; busy: bool
   const valid = isAmount(amount);
   return (
     <form
-      className="flex flex-col gap-3 border-t pt-4"
+      className="flex flex-col gap-3 border-t border-border pt-5"
       onSubmit={(e) => {
         e.preventDefault();
         if (valid) onSubmit(token, amount);
@@ -293,10 +341,11 @@ function NetHint({
     })
     .filter((r) => r.owe > 0n || r.owed > 0n);
 
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground">You have no open bills, so there&apos;s nothing to fund. Add a bill on the Bills page.</p>;
+  }
   return (
-    <div className="flex flex-col gap-3 rounded-md bg-muted p-4">
-      <p className="text-sm font-medium">For the next cycle</p>
+    <div className="flex flex-col gap-4">
       {rows.map((r) => (
         <div key={r.token} className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
