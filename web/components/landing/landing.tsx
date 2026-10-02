@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useMotionValueEvent, useScroll } from "motion/react";
+import { BILLS, CITIES, FLOWS, GROSS, heroProgress, NET, smooth } from "./story";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, FileSignature, Layers, Wallet } from "lucide-react";
@@ -34,47 +36,93 @@ export function Landing() {
 }
 
 function Hero() {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  const [p, setP] = useState(0);
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    heroProgress.current = v;
+    setP(v);
+  });
+
+  const settled = smooth(0.45, 0.7, p);
+  const bills = Math.round(BILLS.length + (FLOWS.length - BILLS.length) * settled);
+  const moved = Math.round(GROSS + (NET - GROSS) * settled);
+  const intro = 1 - smooth(0.12, 0.3, p);
+
   return (
-    <section className="relative -mt-16 overflow-hidden">
-      {/* Soft accent wash behind the globe. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_45%,color-mix(in_oklch,var(--primary)_18%,transparent),transparent_70%)]"
-      />
-      <div className="relative mx-auto grid min-h-[100svh] w-full max-w-6xl items-center gap-8 px-4 pt-24 pb-16 md:grid-cols-[1.05fr_1fr] md:px-6">
-        <div className="relative z-10 flex flex-col items-start gap-7">
-          <Reveal>
+    // Tall section with a pinned viewport: scrolling through it runs one netting cycle on the globe.
+    <section ref={ref} className="relative -mt-16 h-[240svh]">
+      <div className="sticky top-0 h-[100svh] overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_55%_at_68%_50%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent_70%)]"
+        />
+        <div className="relative mx-auto grid h-full w-full max-w-6xl items-center gap-8 px-4 pt-16 md:grid-cols-[1fr_1.1fr] md:px-6">
+          <div className="relative z-10 flex flex-col items-start gap-7">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
               <span className="size-1.5 rounded-full bg-primary" aria-hidden />
               Live on {net.name}
             </span>
-          </Reveal>
-          <Reveal delay={0.05}>
             <h1 className="text-5xl font-semibold leading-[1.04] tracking-tight md:text-6xl">
               <span className="block md:whitespace-nowrap">Settle every bill.</span>
               <span className="block text-muted-foreground md:whitespace-nowrap">Move only the net.</span>
             </h1>
-          </Reveal>
-          <Reveal delay={0.1}>
             <p className="max-w-md text-lg leading-8 text-muted-foreground">
               Setoff clears what businesses owe each other in one onchain cycle. Debts that cancel out never move — you
               only fund the difference.
             </p>
-          </Reveal>
-          <Reveal delay={0.15} className="flex flex-wrap gap-3">
-            <Link href="/app" className={buttonVariants({ size: "lg", className: "h-11 px-5 text-base" })}>
-              Launch app <ArrowRight aria-hidden />
-            </Link>
-            <Link href="#how" className={buttonVariants({ size: "lg", variant: "outline", className: "h-11 px-5 text-base" })}>
-              How it works
-            </Link>
-          </Reveal>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/app" className={buttonVariants({ size: "lg", className: "h-11 px-5 text-base" })}>
+                Launch app <ArrowRight aria-hidden />
+              </Link>
+              <Link href="#how" className={buttonVariants({ size: "lg", variant: "outline", className: "h-11 px-5 text-base" })}>
+                How it works
+              </Link>
+            </div>
+            <CycleCard bills={bills} moved={moved} settled={settled} />
+          </div>
+          <div className="absolute inset-0 -z-0 opacity-50 md:relative md:inset-auto md:h-[min(82svh,700px)] md:opacity-100">
+            <Globe />
+          </div>
         </div>
-        <div className="absolute inset-x-0 top-24 -z-0 h-[70vh] opacity-60 md:relative md:inset-auto md:top-auto md:h-[min(80vh,640px)] md:opacity-100">
-          <Globe />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-8 flex flex-col items-center gap-2 text-xs text-muted-foreground transition-opacity"
+          style={{ opacity: intro }}
+          aria-hidden
+        >
+          Scroll to run a cycle
+          <span className="h-8 w-px bg-gradient-to-b from-muted-foreground to-transparent" />
         </div>
       </div>
     </section>
+  );
+}
+
+/** Live readout of the globe: the 18 bills on screen, and what one Setoff cycle reduces them to. */
+function CycleCard({ bills, moved, settled }: { bills: number; moved: number; settled: number }) {
+  const done = settled > 0.98;
+  return (
+    <div className="mt-2 grid w-full max-w-md grid-cols-3 gap-px overflow-hidden rounded-xl border border-border bg-border text-sm" aria-live="polite">
+      <div className="flex flex-col gap-1 bg-card/80 p-4 backdrop-blur">
+        <span className="text-xs text-muted-foreground">{done ? "Transfers" : "Bills"}</span>
+        <span className="font-mono text-2xl tabular-nums">{bills}</span>
+      </div>
+      <div className="flex flex-col gap-1 bg-card/80 p-4 backdrop-blur">
+        <span className="text-xs text-muted-foreground">USDC moved</span>
+        <span className={`font-mono text-2xl tabular-nums ${done ? "text-primary" : ""}`}>{moved}</span>
+      </div>
+      <div className="flex flex-col gap-1 bg-card/80 p-4 backdrop-blur">
+        <span className="text-xs text-muted-foreground">Never moved</span>
+        <span className="font-mono text-2xl tabular-nums">{Math.round(((GROSS - moved) / GROSS) * 100)}%</span>
+      </div>
+      <p className="col-span-3 bg-card/80 px-4 py-2.5 text-xs text-muted-foreground backdrop-blur">
+        {done
+          ? `One cycle settled all ${BILLS.length} bills between ${CITIES.length} cities with ${FLOWS.length} net transfers.`
+          : settled > 0.02
+            ? "Netting… every bill clears in the same transaction."
+            : `${BILLS.length} bills between ${CITIES.length} cities, each paid on its own.`}
+      </p>
+    </div>
   );
 }
 
