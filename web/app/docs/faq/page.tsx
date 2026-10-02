@@ -32,7 +32,11 @@ const QA: [string, string, React.ReactNode][] = [
     "No. Settlement only updates the internal ledger and never transfers tokens, so a blocklisted address can't make a cycle revert for everyone else.",
   ],
   ["currencies", "Do USDC and EURC net against each other?", "No. Each currency nets separately. Settling the leftover difference through StableFX is on the roadmap."],
-  ["privacy", "Is my data private?", "No. Bills, amounts and notes are public onchain, like any transfer on a public chain. Don't put sensitive information in invoice notes."],
+  [
+    "privacy",
+    "Is my data private?",
+    "Partly. Invoice notes can be private: turn on private notes on the Wallet page and they're encrypted so only you and the other party can read them. Amounts, names and addresses are always public, because the contract needs them to settle. Full confidential amounts are possible once Arc's Privacy Sector launches.",
+  ],
   ["demo", "Who are the businesses marked \"(demo)\"?", "Example wallets that keep the network active so you can see how it works. They are roles, not real companies. Your own bills settle alongside them."],
 ];
 

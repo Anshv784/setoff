@@ -6,6 +6,7 @@ import { net } from "@/lib/config";
 import { loadSnapshot, type Snapshot } from "@/lib/data";
 import * as w from "@/lib/wallet";
 import { useInjectedWallets, type WalletOption } from "@/lib/wallets";
+import { bytesToHex, type NoteKeys } from "@/lib/private-notes";
 
 const REFRESH_MS = 20_000;
 const REMEMBER_KEY = "setoff.wallet";
@@ -27,6 +28,12 @@ type AppState = {
   connectWith: (wallet: WalletOption) => Promise<void>;
   switchToArc: () => Promise<void>;
   disconnect: () => void;
+  /** This wallet's private-note keys, held in memory for the session only. */
+  noteKeys?: NoteKeys;
+  /** Free signature → keys. Returns false if they don't match the key this wallet published. */
+  unlockNotes: () => Promise<boolean>;
+  /** Free signature + one tiny transaction publishing the public key. */
+  enableNotes: () => Promise<void>;
 };
 
 const Ctx = createContext<AppState | null>(null);
@@ -55,6 +62,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [wallet, setWallet] = useState<WalletOption>();
   const [onArc, setOnArc] = useState(true);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [noteKeys, setNoteKeys] = useState<NoteKeys>();
   const { wallets, ready: walletsReady } = useInjectedWallets();
 
   const reload = useCallback(() => {
@@ -96,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const p = wallet?.provider as (EIP1193Provider & { removeListener?: EIP1193Provider["removeListener"] }) | undefined;
     if (!p?.on) return;
     const onAccounts = (accs: string[]) => {
+      setNoteKeys(undefined);
       if (accs[0]) setAccount(accs[0] as Address);
       else {
         setAccount(undefined);
@@ -126,9 +135,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setOnArc((await w.chainId()) === net.chain.id);
   }, []);
 
+  const unlockNotes = useCallback(async () => {
+    if (!account) return false;
+    const keys = await w.deriveNoteKeys(account);
+    const published = snapshot?.noteKeys[account.toLowerCase()];
+    // A wallet with non-deterministic signatures would derive a different key; refuse it.
+    if (published && published.toLowerCase() !== bytesToHex(keys.publicKey)) return false;
+    setNoteKeys(keys);
+    return true;
+  }, [account, snapshot]);
+
+  const enableNotes = useCallback(async () => {
+    if (!account) return;
+    const keys = await w.deriveNoteKeys(account);
+    await w.publishNoteKey(account, keys.publicKey);
+    setNoteKeys(keys);
+    reload();
+  }, [account, reload]);
+
   const disconnect = useCallback(() => {
     void w.revoke();
     w.setProvider(undefined);
+    setNoteKeys(undefined);
     setAccount(undefined);
     setWallet(undefined);
     remember(undefined);
@@ -153,6 +181,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         connectWith,
         switchToArc,
         disconnect,
+        noteKeys,
+        unlockNotes,
+        enableNotes,
       }}
     >
       {children}

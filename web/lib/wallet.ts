@@ -16,7 +16,8 @@ import {
 import { memoAbi } from "./memoAbi";
 import { setoffAbi } from "./setoffAbi";
 import { MEMO, net } from "./config";
-import { client } from "./data";
+import { client, NOTE_KEY_ID } from "./data";
+import { bytesToHex, KEY_MESSAGE, keysFromSignature } from "./private-notes";
 import { iouDomain, iouTypes, type Invoice, type IOU } from "./invoice";
 import { identityAbi, registrationURI } from "./identity";
 
@@ -223,5 +224,24 @@ export async function registerName(account: Address, name: string) {
   const w = await wallet(account);
   return confirm(
     await w.writeContract({ address: net.identityRegistry, abi: identityAbi, functionName: "register", args: [registrationURI(name)] }),
+  );
+}
+
+/** Derive this wallet's private-note keys from a free signature over a fixed message. */
+export async function deriveNoteKeys(account: Address) {
+  const w = await wallet(account);
+  const signature = await w.signMessage({ account, message: KEY_MESSAGE });
+  return keysFromSignature(signature);
+}
+
+/**
+ * Publish the public half through Memo so others can encrypt notes to you. Memo needs a
+ * call to wrap, so it wraps a harmless read of Setoff's token list.
+ */
+export async function publishNoteKey(account: Address, publicKey: Uint8Array) {
+  const data = encodeFunctionData({ abi: setoffAbi, functionName: "tokens" });
+  const w = await wallet(account);
+  return confirm(
+    await w.writeContract({ address: MEMO, abi: memoAbi, functionName: "memo", args: [net.setoff, data, NOTE_KEY_ID, bytesToHex(publicKey)] }),
   );
 }

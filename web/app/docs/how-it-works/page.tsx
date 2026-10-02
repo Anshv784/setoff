@@ -56,6 +56,26 @@ export default function Page() {
         on <C>withdraw</C>; settlement itself never transfers tokens.
       </P>
 
+      <H2 id="private-notes">Private notes</H2>
+      <P>
+        Invoice notes can be encrypted so only the debtor and creditor can read them. Each wallet turns this on once on the Wallet page: a free
+        signature creates its key, and a tiny transaction publishes the public half through Memo. When both parties have it on, &quot;Keep this
+        note private&quot; is ticked by default.
+      </P>
+      <List>
+        <li>
+          <strong>What stays private:</strong> the note text. It&apos;s sealed with X25519 and XChaCha20-Poly1305 (via the audited{" "}
+          <C>@noble</C> libraries), with one copy of the key wrapped for each party.
+        </li>
+        <li>
+          <strong>What stays public:</strong> amounts, names and addresses. The contract needs them to check and settle every cycle.
+        </li>
+        <li>
+          <strong>Your key is never stored.</strong> It&apos;s derived from your signature each time you unlock, so it lives only in your
+          browser for that session.
+        </li>
+      </List>
+
       <H2 id="currencies">Currencies</H2>
       <P>
         USDC and EURC net independently. Owing 5 USDC and being owed 5 EURC is still a 5 USDC debt. Converting across currencies through

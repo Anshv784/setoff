@@ -36,6 +36,8 @@ export type CycleRow = {
 
 export type Snapshot = {
   tokens: Address[];
+  /** Published private-note public keys, by lower-case address (hex, 32 bytes). */
+  noteKeys: Record<string, Hex>;
   ious: IOURow[];
   cycles: CycleRow[];
   head: bigint;
@@ -60,6 +62,8 @@ async function logsInWindows<T>(fetchWindow: (from: bigint, to: bigint) => Promi
 }
 
 const cycleMemoId = (cycle: bigint) => keccak256(toHex(`setoff:cycle:${cycle}`));
+/** Memo id under which a wallet publishes its private-note public key. */
+export const NOTE_KEY_ID = keccak256(toHex("setoff:notekey:v1"));
 
 /** Everything the dashboard shows, rebuilt from onchain events. */
 export async function loadSnapshot(): Promise<Snapshot> {
@@ -91,8 +95,14 @@ export async function loadSnapshot(): Promise<Snapshot> {
   ]);
 
   const memos = new Map<string, string>();
+  const noteKeys: Record<string, Hex> = {};
   for (const m of memoLogs) {
     if (!m.args.memoId || !m.args.memo) continue;
+    // Private-note keys are raw 32-byte public keys, published once per wallet (latest wins).
+    if (m.args.memoId === NOTE_KEY_ID) {
+      if (m.args.sender && m.args.memo.length === 66) noteKeys[m.args.sender.toLowerCase()] = m.args.memo;
+      continue;
+    }
     try {
       memos.set(m.args.memoId, hexToString(m.args.memo));
     } catch {
@@ -161,7 +171,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
     for (const [k, v] of found) identities.set(k, v);
   } catch {}
 
-  return { tokens: [...tokens], ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
+  return { tokens: [...tokens], noteKeys, ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
 }
 
 export type Totals = { gross: Record<string, bigint>; netFunded: Record<string, bigint>; settledIous: number };

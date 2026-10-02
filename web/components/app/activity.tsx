@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Party } from "@/components/setoff/party";
+import { isEncrypted } from "@/lib/private-notes";
+import { readNote } from "@/lib/notes-view";
+import { NoteText } from "./notes";
 import { useApp } from "./state";
 
 type Tab = "cycles" | "open" | "bills";
@@ -156,12 +159,13 @@ const STATUS_STYLE: Record<IOURow["status"], string> = {
 };
 
 function noteOf(i: IOURow) {
-  if (!i.note) return undefined;
+  if (!i.note || isEncrypted(i.note)) return undefined;
   const m = i.note.match(/^[^:]+:\s*(.*?)(,\s*[\d.]+\s*(USDC|EURC))?$/);
   return m?.[1] || i.note;
 }
 
 function Bills({ snapshot, initial }: { snapshot: Snapshot; initial: Status }) {
+  const { account, noteKeys, unlockNotes } = useApp();
   const [status, setStatus] = useState<Status>(initial);
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(PAGE);
@@ -228,8 +232,12 @@ function Bills({ snapshot, initial }: { snapshot: Snapshot; initial: Status }) {
                 <Party address={i.debtor} />
                 <Party address={i.creditor} />
                 <span className="font-mono text-sm tabular-nums md:text-right">{fmtToken(i.amount, i.token)}</span>
-                <span className="truncate text-sm text-muted-foreground" title={i.note}>
-                  {noteOf(i) ?? "—"}
+                <span className="truncate text-sm text-muted-foreground" title={isEncrypted(i.note) ? undefined : i.note}>
+                  {isEncrypted(i.note) ? (
+                    <NoteText view={readNote(i, account, noteKeys)} canUnlock={!!account && !!snapshot.noteKeys[account.toLowerCase()]} onUnlock={() => void unlockNotes()} />
+                  ) : (
+                    (noteOf(i) ?? "—")
+                  )}
                 </span>
                 <span>
                   <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs ${STATUS_STYLE[i.status]}`}>

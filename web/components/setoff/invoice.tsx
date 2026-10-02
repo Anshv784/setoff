@@ -5,7 +5,9 @@ import { isAddress, type Address, type Hex } from "viem";
 import { toast } from "sonner";
 import { Check, Copy, FileText, Wallet } from "lucide-react";
 import { net } from "@/lib/config";
-import { client } from "@/lib/data";
+import { client, type Snapshot } from "@/lib/data";
+import { recipientKeys, sealNote } from "@/lib/notes-view";
+import { PrivateToggle } from "@/components/app/notes";
 import { decodeInvoice, invoiceUrl, newIOU, type Invoice } from "@/lib/invoice";
 import { fmtDate, fmtToken } from "@/lib/format";
 import * as w from "@/lib/wallet";
@@ -103,14 +105,17 @@ export function InvoiceView({
   onConnect,
   onChange,
   onClose,
+  snapshot,
 }: {
   param: string;
+  snapshot?: Snapshot;
   account?: Address;
   onConnect: () => void;
   onChange: () => void;
   onClose: () => void;
 }) {
   const [sig, setSig] = useState<Hex>();
+  const [keepPrivate, setKeepPrivate] = useState(true);
   const [status, setStatus] = useState<Status>();
   const [tick, setTick] = useState(0);
   const { busy, run } = useTx(() => {
@@ -210,10 +215,20 @@ export function InvoiceView({
               <Button
                 className="self-start"
                 disabled={!!busy}
-                onClick={() => run("Post invoice", () => w.postInvoice(account, inv))}
+                onClick={() => {
+                  const sealed = keepPrivate && snapshot ? sealNote(snapshot, iou.debtor, iou.creditor, inv.note) : undefined;
+                  run("Post invoice", () => w.postInvoice(account, { ...inv, note: sealed ?? inv.note }));
+                }}
               >
                 <FileText aria-hidden /> Add to Setoff
               </Button>
+              {snapshot && (
+                <PrivateToggle
+                  status={recipientKeys(snapshot, iou.debtor, iou.creditor) ? "ready" : "them"}
+                  checked={keepPrivate}
+                  onChange={setKeepPrivate}
+                />
+              )}
               <p className="text-xs text-muted-foreground">
                 Posts the approved invoice onchain through Arc&apos;s Memo contract. Anyone can do this; it costs a fraction of a cent.
               </p>

@@ -9,6 +9,7 @@ import { Account } from "@/components/setoff/account";
 import { NetworkView } from "@/components/setoff/network";
 import { PageHeader } from "./shell";
 import { useApp } from "./state";
+import { PrivateNotesCard } from "./notes";
 
 
 export function OverviewPage() {
@@ -16,21 +17,37 @@ export function OverviewPage() {
 }
 
 export function BillsPage() {
-  const { snapshot, account, connect, reload } = useApp();
+  const { snapshot, account, connect, reload, noteKeys, unlockNotes } = useApp();
   return (
     <>
       <PageHeader title="Bills" description="Send an invoice, record what you owe, and track every bill you're part of." />
-      {snapshot ? <Account part="bills" snapshot={snapshot} account={account} onConnect={connect} onChange={reload} /> : <Skeleton className="h-96 w-full" />}
+      {snapshot ? <Account part="bills" snapshot={snapshot} account={account} onConnect={connect} onChange={reload} noteKeys={noteKeys} onUnlock={() => void unlockNotes()} /> : <Skeleton className="h-96 w-full" />}
     </>
   );
 }
 
 export function WalletPage() {
-  const { snapshot, account, connect, reload } = useApp();
+  const { snapshot, account, connect, reload, noteKeys, unlockNotes, enableNotes } = useApp();
   return (
     <>
       <PageHeader title="Wallet" description="Your deposits, your net for the next cycle, and your name on Arc." />
-      {snapshot ? <Account part="wallet" snapshot={snapshot} account={account} onConnect={connect} onChange={reload} /> : <Skeleton className="h-96 w-full max-w-2xl" />}
+      {snapshot ? <Account
+          part="wallet"
+          snapshot={snapshot}
+          account={account}
+          onConnect={connect}
+          onChange={reload}
+          aside={
+            account && (
+              <PrivateNotesCard
+                enabled={!!snapshot.noteKeys[account.toLowerCase()]}
+                unlocked={!!noteKeys}
+                onEnable={enableNotes}
+                onUnlock={unlockNotes}
+              />
+            )
+          }
+        /> : <Skeleton className="h-96 w-full max-w-2xl" />}
     </>
   );
 }

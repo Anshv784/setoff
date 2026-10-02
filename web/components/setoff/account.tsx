@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Party } from "./party";
+import type { NoteKeys } from "@/lib/private-notes";
+import { readNote, sealNote } from "@/lib/notes-view";
+import { NoteText, PrivateToggle, privacyStatus, type PrivacyStatus } from "@/components/app/notes";
 import { Empty } from "./cycles";
 import { SendInvoiceForm } from "./invoice";
 import { useTx } from "./tx";
@@ -24,6 +27,9 @@ export function Account({
   account,
   onConnect,
   onChange,
+  noteKeys,
+  onUnlock,
+  aside,
 }: {
   /** "wallet": deposits, net hint, name. "bills": add a bill + your IOUs. */
   part: "wallet" | "bills";
@@ -31,6 +37,11 @@ export function Account({
   account?: Address;
   onConnect: () => void;
   onChange: () => void;
+  /** Unlocked private-note keys for this session, if any. */
+  noteKeys?: NoteKeys;
+  onUnlock?: () => void;
+  /** Extra cards for the wallet page's right column. */
+  aside?: React.ReactNode;
 }) {
   const [bals, setBals] = useState<Bal>();
   const [tick, setTick] = useState(0);
@@ -120,6 +131,7 @@ export function Account({
             </h2>
             <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
           </section>
+          {aside}
         </div>
       </div>
     );
@@ -151,7 +163,12 @@ export function Account({
               account={account}
               tokens={snapshot.tokens}
               busy={!!busy}
-              onSubmit={(input) => run("Record IOU", () => w.recordIOU(account, input))}
+              privacy={(creditor) => privacyStatus(snapshot, account, creditor)}
+              onSubmit={({ private: priv, ...input }) =>
+                run("Record IOU", () =>
+                  w.recordIOU(account, { ...input, note: (priv && sealNote(snapshot, account, input.creditor, input.note)) || input.note }),
+                )
+              }
             />
           </TabsContent>
         </Tabs>
@@ -166,7 +183,7 @@ export function Account({
             variant="outline"
             size="sm"
             disabled={!myIous.some((i) => i.status === "settled")}
-            onClick={() => exportCsv(account, myIous, snapshot)}
+            onClick={() => exportCsv(account, myIous, snapshot, noteKeys)}
           >
             Export CSV
           </Button>
@@ -198,6 +215,11 @@ export function Account({
                   <div className="flex min-w-0 flex-col gap-1">
                     <span className="text-xs text-muted-foreground">{owe ? "You owe" : "Owes you"}</span>
                     <Party address={owe ? i.creditor : i.debtor} />
+                    {i.note && (
+                      <span className="truncate text-xs text-muted-foreground">
+                        <NoteText view={readNote(i, account, noteKeys)} canUnlock={!!snapshot.noteKeys[account.toLowerCase()]} onUnlock={onUnlock} />
+                      </span>
+                    )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className="font-mono text-sm tabular-nums">{fmtToken(i.amount, i.token)}</span>
@@ -328,26 +350,30 @@ function IOUForm({
   account,
   tokens,
   busy,
+  privacy,
   onSubmit,
 }: {
   account: Address;
   tokens: Address[];
   busy: boolean;
-  onSubmit: (input: { creditor: Address; token: Address; amount: string; days: number; note: string }) => void;
+  privacy: (creditor?: Address) => PrivacyStatus | undefined;
+  onSubmit: (input: { creditor: Address; token: Address; amount: string; days: number; note: string; private: boolean }) => void;
 }) {
   const [creditor, setCreditor] = useState("");
+  const [keepPrivate, setKeepPrivate] = useState(true);
   const [token, setToken] = useState<Address>(tokens[0]!);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const creditorError =
     creditor && !isAddress(creditor) ? "Enter a valid address" : creditor.toLowerCase() === account.toLowerCase() ? "You can't owe yourself" : undefined;
   const valid = isAddress(creditor) && !creditorError && isAmount(amount) && note.trim().length > 0;
+  const status = privacy(isAddress(creditor) ? (creditor as Address) : undefined);
   return (
     <form
       className="flex flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid) onSubmit({ creditor: creditor as Address, token, amount, days: 7, note: note.trim() });
+        if (valid) onSubmit({ creditor: creditor as Address, token, amount, days: 7, note: note.trim(), private: status === "ready" && keepPrivate });
       }}
     >
       <div className="flex flex-col gap-2">
@@ -380,6 +406,7 @@ function IOUForm({
         <Label htmlFor="iou-note">What it&apos;s for</Label>
         <Input id="iou-note" autoComplete="off" maxLength={120} placeholder="Invoice #1042, logo design" value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
+      <PrivateToggle status={status} checked={keepPrivate} onChange={setKeepPrivate} />
       <p className="text-xs text-muted-foreground">
         Posted through Arc&apos;s Memo contract, so the note is stored onchain with the IOU. Settles in the next cycle you can fund, within 7 days.
       </p>
@@ -521,7 +548,7 @@ export function isAmount(v: string) {
 
 
 /** One row per settled IOU: which cycle and transaction discharged which invoice. */
-function exportCsv(account: Address, ious: IOURow[], snapshot: Snapshot) {
+function exportCsv(account: Address, ious: IOURow[], snapshot: Snapshot, keys?: NoteKeys) {
   const txOf = new Map(snapshot.cycles.map((c) => [String(c.cycle), c]));
   const rows = [["direction", "counterparty", "amount", "token", "note", "ref", "cycle", "settled_at", "settlement_tx"]];
   for (const i of ious.filter((x) => x.status === "settled")) {
@@ -532,7 +559,10 @@ function exportCsv(account: Address, ious: IOURow[], snapshot: Snapshot) {
       owe ? i.creditor : i.debtor,
       fmtToken(i.amount, i.token).split(" ")[0]!.replaceAll(",", ""),
       tokenSymbol(i.token),
-      i.note ?? "",
+      (() => {
+        const v = readNote(i, account, keys);
+        return v.text ?? (v.isPrivate ? "[private note — unlock to export]" : "");
+      })(),
       i.ref,
       String(i.cycle),
       c?.timestamp ? fmtDate(c.timestamp) : "",

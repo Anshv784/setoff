@@ -112,10 +112,10 @@ function InvoiceGate() {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { account, connect, reload } = useApp();
+  const { account, connect, reload, snapshot } = useApp();
   const param = params.get("invoice");
   if (!param) return null;
-  return <InvoiceView param={param} account={account} onConnect={connect} onChange={reload} onClose={() => router.replace(pathname)} />;
+  return <InvoiceView param={param} snapshot={snapshot} account={account} onConnect={connect} onChange={reload} onClose={() => router.replace(pathname)} />;
 }
 
 function ChainError() {
