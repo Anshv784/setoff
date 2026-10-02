@@ -1,7 +1,8 @@
 import { createPublicClient, getAbiItem, hexToString, http, keccak256, toHex, type Address, type Hex, type Log } from "viem";
 import { setoffAbi } from "./setoffAbi";
 import { memoAbi } from "./memoAbi";
-import { MEMO, net } from "./config";
+import { identities, MEMO, net } from "./config";
+import { loadIdentities } from "./identity";
 
 export const client = createPublicClient({ chain: net.chain, transport: http(net.rpc, { retryCount: 3 }) });
 
@@ -63,7 +64,7 @@ const cycleMemoId = (cycle: bigint) => keccak256(toHex(`setoff:cycle:${cycle}`))
 /** Everything the dashboard shows, rebuilt from onchain events. */
 export async function loadSnapshot(): Promise<Snapshot> {
   const [head, block, tokens] = await Promise.all([
-    client.getBlockNumber(),
+    client.getBlockNumber({ cacheTime: 0 }),
     client.getBlock(),
     client.readContract({ address: net.setoff, abi: setoffAbi, functionName: "tokens" }),
   ]);
@@ -151,6 +152,14 @@ export async function loadSnapshot(): Promise<Snapshot> {
       c.timestamp = (await client.getBlock({ blockNumber: c.block })).timestamp;
     }),
   );
+
+  const parties = new Set<Address>();
+  for (const i of ious.values()) parties.add(i.debtor).add(i.creditor);
+  // Names are a nicety: a registry hiccup must not take the dashboard down.
+  try {
+    const found = await loadIdentities([...parties], head);
+    for (const [k, v] of found) identities.set(k, v);
+  } catch {}
 
   return { tokens: [...tokens], ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
 }

@@ -9,6 +9,7 @@
  */
 import {
   createWalletClient,
+  getAbiItem,
   encodeFunctionData,
   erc20Abi,
   formatUnits,
@@ -97,7 +98,44 @@ for (const p of people) {
   console.log(`topped up ${p.role} ${p.account.address}`);
 }
 
-// 2. Invoices: each debtor posts its own IOU via Memo, so the invoice text lives onchain.
+// 1b. Names: each demo wallet registers its role as an ERC-8004 identity (once).
+const identityAbi = [
+  { type: "function", name: "register", stateMutability: "nonpayable", inputs: [{ name: "agentURI", type: "string" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "event",
+    name: "Registered",
+    inputs: [
+      { name: "agentId", type: "uint256", indexed: true },
+      { name: "agentURI", type: "string", indexed: false },
+      { name: "owner", type: "address", indexed: true },
+    ],
+  },
+] as const;
+{
+  const head = await client.getBlockNumber({ cacheTime: 0 });
+  const registered = new Set<string>();
+  for (let from = net.deployBlock; from <= head; from += 10_000n) {
+    const logs = await client.getLogs({
+      address: net.identityRegistry,
+      event: getAbiItem({ abi: identityAbi, name: "Registered" }),
+      args: { owner: people.map((p) => p.account.address) },
+      fromBlock: from,
+      toBlock: from + 9_999n > head ? head : from + 9_999n,
+    });
+    for (const l of logs) if (l.args.owner) registered.add(l.args.owner.toLowerCase());
+  }
+  for (const p of people) {
+    if (registered.has(p.account.address.toLowerCase())) continue;
+    const file = { type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1", name: `${p.role} (demo)`, description: "Setoff demo participant run by the builder" };
+    const uri = `data:application/json;base64,${Buffer.from(JSON.stringify(file)).toString("base64")}`;
+    await send(p.account, { address: net.identityRegistry, abi: identityAbi, functionName: "register", args: [uri] });
+    console.log(`registered ERC-8004 name for ${p.role}`);
+  }
+}
+
+// 2. Invoices, two ways — both through Memo so the invoice text lives onchain:
+//    even i: the creditor bills the debtor, who approves with a free EIP-712 signature;
+//    odd  i: the debtor records what it owes directly.
 const rand = (n: number) => Math.floor(Math.random() * n);
 const { timestamp } = await client.getBlock();
 for (let i = 0; i < count; i++) {
@@ -118,14 +156,33 @@ for (let i = 0; i < count; i++) {
     ref,
   };
   const note = `${creditor.role} invoice to ${debtor.role}: ${job}, ${formatUnits(amount, 6)} USDC`;
-  const data = encodeFunctionData({ abi: setoffAbi, functionName: "submit", args: [iou, "0x"] });
-  const hash = await send(debtor.account, {
+  const viaInvoice = i % 2 === 0;
+  const sig = viaInvoice
+    ? await debtor.account.signTypedData({
+        domain: { name: "Setoff", version: "1", chainId: net.chain.id, verifyingContract: net.setoff },
+        types: {
+          IOU: [
+            { name: "debtor", type: "address" },
+            { name: "creditor", type: "address" },
+            { name: "token", type: "address" },
+            { name: "amount", type: "uint128" },
+            { name: "deadline", type: "uint64" },
+            { name: "nonce", type: "uint256" },
+            { name: "ref", type: "bytes32" },
+          ],
+        },
+        primaryType: "IOU",
+        message: iou,
+      })
+    : "0x";
+  const data = encodeFunctionData({ abi: setoffAbi, functionName: "submit", args: [iou, sig] });
+  const hash = await send(viaInvoice ? creditor.account : debtor.account, {
     address: MEMO,
     abi: memoAbi,
     functionName: "memo",
     args: [net.setoff, data, ref, toHex(note)],
   });
-  console.log(`${note}  ${net.explorer}/tx/${hash}`);
+  console.log(`${viaInvoice ? "[signed invoice]" : "[recorded]     "} ${note}  ${net.explorer}/tx/${hash}`);
 }
 
 // 3. Funding: each net debtor deposits only its shortfall, approve + deposit in one batch.

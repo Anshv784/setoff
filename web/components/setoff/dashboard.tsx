@@ -1,6 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import type { Address } from "viem";
+import { toast } from "sonner";
+import { connect } from "@/lib/wallet";
+import { InvoiceView } from "./invoice";
+import { errorText } from "./tx";
 import { net } from "@/lib/config";
 import { loadSnapshot, type Snapshot } from "@/lib/data";
 import { shortAddr } from "@/lib/format";
@@ -20,6 +25,26 @@ export const REPO = "https://github.com/Anshv784/setoff";
 export function Dashboard() {
   const [snapshot, setSnapshot] = useState<Snapshot>();
   const [error, setError] = useState<string>();
+  const [account, setAccount] = useState<Address>();
+  const [closed, setClosed] = useState(false);
+  // Read ?invoice= from the URL; empty during the static prerender.
+  const search = useSyncExternalStore(
+    () => () => {},
+    () => window.location.search,
+    () => "",
+  );
+  const invoiceParam = closed ? null : new URLSearchParams(search).get("invoice");
+
+  const onConnect = useCallback(() => {
+    connect()
+      .then(setAccount)
+      .catch((e) => toast.error(errorText(e)));
+  }, []);
+
+  const closeInvoice = useCallback(() => {
+    window.history.replaceState(null, "", window.location.pathname);
+    setClosed(true);
+  }, []);
 
   const load = useCallback(() => {
     loadSnapshot()
@@ -62,6 +87,10 @@ export function Dashboard() {
       </header>
 
       <main className="flex flex-col gap-16">
+        {invoiceParam && (
+          <InvoiceView param={invoiceParam} account={account} onConnect={onConnect} onChange={load} onClose={closeInvoice} />
+        )}
+
         {error && !snapshot ? (
           <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border border-destructive/40 p-6">
             <p className="font-medium">Couldn&apos;t read from {net.name}</p>
@@ -108,7 +137,7 @@ export function Dashboard() {
           <h2 id="take-part" className="text-xl font-semibold">
             Take part
           </h2>
-          {snapshot ? <Account snapshot={snapshot} onChange={load} /> : <Skeleton className="h-48 w-full" />}
+          {snapshot ? <Account snapshot={snapshot} account={account} onConnect={onConnect} onChange={load} /> : <Skeleton className="h-48 w-full" />}
         </section>
       </main>
 

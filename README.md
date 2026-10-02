@@ -38,7 +38,11 @@ flowchart LR
     UI -. "logs: IOUs, cycles, memos" .-> S
 ```
 
-1. **Record an IOU.** The debtor either signs it off-chain (EIP-712, so anyone can post it for them) or submits it directly through Arc's Memo contract with an invoice note. IOUs live onchain in a public pool. Each one has a currency, an amount, a deadline and a `ref` for the invoice ID.
+1. **Add a bill**, in one of two ways:
+   - **Send an invoice.** The creditor drafts a bill and gets a link. The debtor opens it and approves with a free EIP-712 signature (no gas, no USDC needed). Then anyone, usually the creditor, posts the approved invoice.
+   - **Record what you owe.** The debtor posts the IOU directly.
+
+   Both paths go through Arc's Memo contract, so the invoice note is stored onchain with the IOU. IOUs live onchain in a public pool. Each one has a currency, an amount, a deadline and a `ref` for the invoice ID.
 2. **Fund only your net.** If you owe 10 across the pool and are owed 8, you deposit 2. Approve and deposit go in one transaction via Multicall3From, which keeps your wallet as `msg.sender`.
 3. **Clear a cycle.** A solver picks a set of pending IOUs that deposits can fund and calls `settle`. The contract recomputes everyone's net position, debits net debtors and credits net creditors, all in one atomic step. If any net debtor is underfunded, the whole cycle reverts.
 4. **Withdraw.** Creditors withdraw their balance whenever they want, or leave it in to fund future cycles.
@@ -96,6 +100,7 @@ Every feature below is used in the deployed flow and checked on-chain.
 | **Multicall3From** (`0x522f…47D0`) | `approve` + `deposit` in one transaction, with the participant preserved as sender. |
 | **Deterministic sub-second finality** | A settled cycle is final straight away, so cycles can run every few minutes and participants can withdraw at once. |
 | **EURC** | Second settlement currency, netted on its own. |
+| **ERC-8004 identity** | Participants register a name in Arc's IdentityRegistry. The registration file is stored inline as a `data:` URI, with nothing to host. The dashboard shows registered names with a ✓ instead of addresses, and checks that each identity is still owned by that address. The demo wallets register their roles this way. |
 | **USDC blocklist** | The ledger-only settlement design, described above. |
 
 ### Measured costs (Arc gas is 20 gwei, priced in USDC)
@@ -177,10 +182,10 @@ Then set the address and deploy block in `solver/src/config.ts` and `web/lib/con
 - **Unaudited.** Use small amounts.
 - **The solver is a heuristic.** An exact solver (ILP) or competing solvers with a scoring window would clear more. The contract already allows any solver.
 - **No cross-currency netting.** A natural next step is settling each party's leftover EUR/USD difference through StableFX's `FxEscrow`.
-- **Gasless IOUs.** The contract accepts debtor-signed IOUs posted by anyone, but the dashboard only offers the direct path so far.
-- **Identity.** Showing ERC-8004 agent identities next to addresses would let agents take part as named counterparties.
+- **Relayer.** Approving an invoice is gasless, but someone still pays a fraction of a cent to post it. A relayer could post approved invoices automatically.
+- **Agents.** ERC-8004 identities already label participants. An MCP server would let AI agents send and approve invoices themselves.
 
-The demo participants on the dashboard are wallets run by the builder to show the flow. Their roles ("Design studio", "Courier", …) are labels, not real businesses.
+The demo participants on the dashboard are wallets run by the builder to show the flow. Their ERC-8004 names say "(demo)": they are roles, not real businesses.
 
 ## License
 

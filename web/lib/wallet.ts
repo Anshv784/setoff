@@ -17,6 +17,8 @@ import { memoAbi } from "./memoAbi";
 import { setoffAbi } from "./setoffAbi";
 import { MEMO, net } from "./config";
 import { client } from "./data";
+import { iouDomain, iouTypes, type Invoice, type IOU } from "./invoice";
+import { identityAbi, registrationURI } from "./identity";
 
 export const MULTICALL3_FROM: Address = "0x522fAf9A91c41c443c66765030741e4AaCe147D0";
 const aggregate3Abi = [
@@ -162,4 +164,37 @@ export async function balances(account: Address, tokens: Address[]) {
     Promise.all(tokens.map((t) => client.readContract({ address: t, abi: erc20Abi, functionName: "balanceOf", args: [account] }))),
   ]);
   return tokens.map((token, i) => ({ token, deposit: deposits[i]!, wallet: held[i]! }));
+}
+
+/** Debtor approves an invoice: an EIP-712 signature, free and gasless. */
+export async function signInvoice(account: Address, iou: IOU): Promise<Hex> {
+  const w = await wallet(account);
+  return w.signTypedData({ account, domain: iouDomain(), types: iouTypes, primaryType: "IOU", message: iou });
+}
+
+/**
+ * Post a debtor-signed IOU to the pool. Anyone can do it — usually the creditor — and it
+ * goes through Memo so the invoice note is stored onchain with it.
+ */
+export async function postInvoice(account: Address, inv: Invoice) {
+  if (!inv.sig) throw new Error("Invoice is not approved yet");
+  const data = encodeFunctionData({ abi: setoffAbi, functionName: "submit", args: [inv.iou, inv.sig] });
+  const args = [net.setoff, data, inv.iou.ref, toHex(inv.note)] as const;
+  await client.simulateContract({ account, address: MEMO, abi: memoAbi, functionName: "memo", args });
+  const w = await wallet(account);
+  return confirm(await w.writeContract({ address: MEMO, abi: memoAbi, functionName: "memo", args }));
+}
+
+export async function iouStatus(iou: IOU) {
+  const id = await client.readContract({ address: net.setoff, abi: setoffAbi, functionName: "hashIOU", args: [iou] });
+  const [, status, cycle] = await client.readContract({ address: net.setoff, abi: setoffAbi, functionName: "getIOU", args: [id] });
+  return { id, status: (["none", "pending", "settled", "cancelled"] as const)[status] ?? "none", cycle };
+}
+
+/** Register an ERC-8004 identity so the dashboard shows a name instead of an address. */
+export async function registerName(account: Address, name: string) {
+  const w = await wallet(account);
+  return confirm(
+    await w.writeContract({ address: net.identityRegistry, abi: identityAbi, functionName: "register", args: [registrationURI(name)] }),
+  );
 }

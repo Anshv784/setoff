@@ -12,6 +12,7 @@ export type Network = {
   setoff: Address;
   deployBlock: bigint;
   eurc: Address;
+  identityRegistry: Address;
 };
 
 // A local arc-anvil fork of Arc Testnet: real USDC/EURC/Memo/Multicall3From, free funds.
@@ -22,6 +23,7 @@ const local: Network = {
   setoff: (process.env.SETOFF_ADDRESS ?? "0x0000000000000000000000000000000000000000") as Address,
   deployBlock: BigInt(process.env.SETOFF_DEPLOY_BLOCK ?? "0"),
   eurc: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
 };
 
 export const networks = {
@@ -34,6 +36,7 @@ export const networks = {
     setoff: "0x93084E5f70E48682ceFAF7041Acca4B0635962cE",
     deployBlock: 65085992n,
     eurc: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
   },
   mainnet: {
     chain: arc,
@@ -42,6 +45,7 @@ export const networks = {
     setoff: "0x0000000000000000000000000000000000000000", // set after mainnet deploy
     deployBlock: 0n,
     eurc: "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1",
+    identityRegistry: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
   },
 } satisfies Record<string, Network>;
 

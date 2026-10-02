@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { isAddress, parseUnits, type Address } from "viem";
-import { toast } from "sonner";
-import { Wallet } from "lucide-react";
-import { net, tokenSymbol } from "@/lib/config";
+import { BadgeCheck, Wallet } from "lucide-react";
+import { identities, net, tokenSymbol } from "@/lib/config";
 import type { IOURow, Snapshot } from "@/lib/data";
 import { fmtDate, fmtToken, shortAddr } from "@/lib/format";
 import * as w from "@/lib/wallet";
@@ -13,19 +12,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Party } from "./party";
 import { Empty } from "./cycles";
+import { SendInvoiceForm } from "./invoice";
+import { useTx } from "./tx";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Bal = Awaited<ReturnType<typeof w.balances>>;
 
-export function Account({ snapshot, onChange }: { snapshot: Snapshot; onChange: () => void }) {
-  const [account, setAccount] = useState<Address>();
+export function Account({
+  snapshot,
+  account,
+  onConnect,
+  onChange,
+}: {
+  snapshot: Snapshot;
+  account?: Address;
+  onConnect: () => void;
+  onChange: () => void;
+}) {
   const [bals, setBals] = useState<Bal>();
-  const [busy, setBusy] = useState<string>();
+  const [tick, setTick] = useState(0);
+  const { busy, run } = useTx(() => {
+    onChange();
+    setTick((t) => t + 1);
+  });
 
-  const refresh = useCallback(async () => {
-    if (account) setBals(await w.balances(account, snapshot.tokens));
-  }, [account, snapshot.tokens]);
   useEffect(() => {
-    // Re-read balances whenever the chain snapshot refreshes.
+    // Re-read balances whenever the chain snapshot refreshes or we send a transaction.
     let live = true;
     if (account)
       w.balances(account, snapshot.tokens)
@@ -34,38 +46,12 @@ export function Account({ snapshot, onChange }: { snapshot: Snapshot; onChange: 
     return () => {
       live = false;
     };
-  }, [account, snapshot]);
-
-  async function run(label: string, fn: () => Promise<string>) {
-    setBusy(label);
-    const id = toast.loading(`${label}…`);
-    try {
-      const hash = await fn();
-      toast.success(`${label} confirmed`, {
-        id,
-        action: { label: "View", onClick: () => window.open(`${net.explorer}/tx/${hash}`, "_blank") },
-      });
-      onChange();
-      await refresh();
-    } catch (e) {
-      toast.error(errorText(e), { id });
-    } finally {
-      setBusy(undefined);
-    }
-  }
+  }, [account, snapshot, tick]);
 
   if (!account) {
     return (
-      <Empty title="Connect a wallet to take part" body={`Deposit, record what you owe, and withdraw what you're owed. Runs on ${net.name}.`}>
-        <Button
-          className="mt-2"
-          onClick={() =>
-            w
-              .connect()
-              .then(setAccount)
-              .catch((e) => toast.error(errorText(e)))
-          }
-        >
+      <Empty title="Connect a wallet to take part" body={`Send invoices, deposit, and withdraw what you're owed. Runs on ${net.name}.`}>
+        <Button className="mt-2" onClick={onConnect}>
           <Wallet aria-hidden /> Connect wallet
         </Button>
       </Empty>
@@ -84,6 +70,7 @@ export function Account({ snapshot, onChange }: { snapshot: Snapshot; onChange: 
           </h3>
           <span className="font-mono text-xs text-muted-foreground">{shortAddr(account)}</span>
         </div>
+        <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
         <ul className="flex flex-col gap-3">
           {(bals ?? snapshot.tokens.map((token) => ({ token, deposit: undefined, wallet: undefined }))).map((b) => (
             <li key={b.token} className="flex items-center justify-between gap-4">
@@ -106,16 +93,27 @@ export function Account({ snapshot, onChange }: { snapshot: Snapshot; onChange: 
         <DepositForm tokens={snapshot.tokens} busy={!!busy} onSubmit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))} />
       </section>
 
-      <section aria-labelledby="rec" className="flex flex-col gap-4 rounded-lg border p-6">
-        <h3 id="rec" className="text-base font-medium">
-          Record an IOU you owe
+      <section aria-labelledby="bill" className="flex flex-col gap-4 rounded-lg border p-6">
+        <h3 id="bill" className="text-base font-medium">
+          Add a bill
         </h3>
-        <IOUForm
-          account={account}
-          tokens={snapshot.tokens}
-          busy={!!busy}
-          onSubmit={(input) => run("Record IOU", () => w.recordIOU(account, input))}
-        />
+        <Tabs defaultValue="invoice">
+          <TabsList>
+            <TabsTrigger value="invoice">Send an invoice</TabsTrigger>
+            <TabsTrigger value="owe">Record what I owe</TabsTrigger>
+          </TabsList>
+          <TabsContent value="invoice" className="pt-4">
+            <SendInvoiceForm account={account} tokens={snapshot.tokens} />
+          </TabsContent>
+          <TabsContent value="owe" className="pt-4">
+            <IOUForm
+              account={account}
+              tokens={snapshot.tokens}
+              busy={!!busy}
+              onSubmit={(input) => run("Record IOU", () => w.recordIOU(account, input))}
+            />
+          </TabsContent>
+        </Tabs>
       </section>
 
       <section aria-labelledby="mine" className="flex flex-col gap-4 lg:col-span-2">
@@ -251,7 +249,39 @@ function IOUForm({
   );
 }
 
-function TokenSelect({ id, tokens, value, onChange }: { id: string; tokens: Address[]; value: Address; onChange: (t: Address) => void }) {
+function NameRow({ account, busy, onRegister }: { account: Address; busy: boolean; onRegister: (name: string) => void }) {
+  const [name, setName] = useState("");
+  const id = identities.get(account.toLowerCase());
+  if (id) {
+    return (
+      <p className="flex items-center gap-1.5 text-sm">
+        <BadgeCheck className="size-4 text-muted-foreground" aria-hidden />
+        Listed as <span className="font-medium">{id.name}</span>
+        <span className="text-xs text-muted-foreground">(ERC-8004 #{String(id.agentId)})</span>
+      </p>
+    );
+  }
+  return (
+    <form
+      className="flex flex-col gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (name.trim()) onRegister(name.trim());
+      }}
+    >
+      <Label htmlFor="reg-name">Your name</Label>
+      <div className="flex gap-2">
+        <Input id="reg-name" autoComplete="organization" maxLength={48} placeholder="Your business or name" value={name} onChange={(e) => setName(e.target.value)} />
+        <Button type="submit" variant="outline" disabled={!name.trim() || busy}>
+          Register
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">Registers an ERC-8004 identity on Arc so others see your name, not your address.</p>
+    </form>
+  );
+}
+
+export function TokenSelect({ id, tokens, value, onChange }: { id: string; tokens: Address[]; value: Address; onChange: (t: Address) => void }) {
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor={id}>Token</Label>
@@ -271,16 +301,11 @@ function TokenSelect({ id, tokens, value, onChange }: { id: string; tokens: Addr
   );
 }
 
-function isAmount(v: string) {
+export function isAmount(v: string) {
   if (!/^\d+(\.\d{1,6})?$/.test(v)) return false;
   return parseUnits(v, 6) > 0n;
 }
 
-function errorText(e: unknown) {
-  const err = e as { shortMessage?: string; message?: string; code?: number };
-  if (err.code === 4001) return "Request rejected in wallet";
-  return err.shortMessage ?? err.message ?? "Something went wrong";
-}
 
 /** One row per settled IOU: which cycle and transaction discharged which invoice. */
 function exportCsv(account: Address, ious: IOURow[], snapshot: Snapshot) {

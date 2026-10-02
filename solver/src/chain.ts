@@ -12,7 +12,7 @@ export const publicClient = (net: Network) =>
 
 /** Every IOU id ever submitted, read in 10k-block windows (Arc's getLogs cap). */
 async function submittedIds(client: Client, net: Network): Promise<Hex[]> {
-  const head = await client.getBlockNumber();
+  const head = await client.getBlockNumber({ cacheTime: 0 });
   const windows: [bigint, bigint][] = [];
   for (let from = net.deployBlock; from <= head; from += LOG_RANGE) {
     const to = from + LOG_RANGE - 1n;
