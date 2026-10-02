@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { Logo, REPO } from "./brand";
+import { GitHubMark, Logo, REPO } from "./brand";
 
 const LINKS = [
   { href: "/#how", label: "How it works" },
@@ -37,7 +37,7 @@ export function SiteNav({ cta = "app", children }: { cta?: "app" | "none"; child
               <li key={l.label}>
                 {l.external ? (
                   <a href={l.href} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "ghost" })}>
-                    {l.label}
+                    <GitHubMark /> {l.label}
                   </a>
                 ) : (
                   <Link href={l.href} className={buttonVariants({ variant: "ghost" })}>

@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { net } from "@/lib/config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/site/brand";
+import { GitHubMark, Logo, REPO } from "@/components/site/brand";
 import { InvoiceView } from "@/components/setoff/invoice";
 import { AppProvider, useApp } from "./state";
 import { ConnectDialog, WalletButton } from "./wallet-ui";
@@ -55,9 +55,17 @@ function AppNav() {
           <NavLinks pathname={pathname} />
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <Link href="/docs" className="hidden rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline">
+          <Link href="/docs" className="hidden h-9 items-center rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex">
             Docs
           </Link>
+          <a
+            href={REPO}
+            target="_blank"
+            rel="noreferrer"
+            className="hidden h-9 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex"
+          >
+            <GitHubMark /> GitHub
+          </a>
           <Badge variant="outline" className="hidden sm:inline-flex">
             {net.name}
           </Badge>
