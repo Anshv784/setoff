@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { BookOpen, Code2 } from "lucide-react";
 import { net } from "@/lib/config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { GitHubMark, Logo, REPO } from "@/components/site/brand";
+import { Logo, REPO } from "@/components/site/brand";
 import { InvoiceView } from "@/components/setoff/invoice";
 import { AppProvider, useApp } from "./state";
 import { ConnectDialog, WalletButton } from "./wallet-ui";
@@ -55,8 +56,8 @@ function AppNav() {
           <NavLinks pathname={pathname} />
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <Link href="/docs" className="hidden h-9 items-center rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex">
-            Docs
+          <Link href="/docs" className="hidden h-9 items-center rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring gap-1.5 lg:inline-flex">
+            <BookOpen className="size-4" aria-hidden /> Docs
           </Link>
           <a
             href={REPO}
@@ -64,7 +65,7 @@ function AppNav() {
             rel="noreferrer"
             className="hidden h-9 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex"
           >
-            <GitHubMark /> GitHub
+            <Code2 className="size-4" aria-hidden /> Code
           </a>
           <Badge variant="outline" className="hidden sm:inline-flex">
             {net.name}

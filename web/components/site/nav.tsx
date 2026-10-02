@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, BookOpen, Code2 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { GitHubMark, Logo, REPO } from "./brand";
+import { Logo, REPO } from "./brand";
 
 const LINKS = [
   { href: "/#how", label: "How it works" },
   { href: "/#arc", label: "Built on Arc" },
   { href: "/docs", label: "Docs" },
-  { href: REPO, label: "GitHub", external: true },
+  { href: REPO, label: "Code", external: true },
 ];
 
 /** Transparent over the hero, frosted once the page scrolls. */
@@ -37,11 +37,11 @@ export function SiteNav({ cta = "app", children }: { cta?: "app" | "none"; child
               <li key={l.label}>
                 {l.external ? (
                   <a href={l.href} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "ghost" })}>
-                    <GitHubMark /> {l.label}
+                    <Code2 aria-hidden /> {l.label}
                   </a>
                 ) : (
                   <Link href={l.href} className={buttonVariants({ variant: "ghost" })}>
-                    {l.label}
+                    {l.href === "/docs" && <BookOpen aria-hidden />} {l.label}
                   </Link>
                 )}
               </li>
