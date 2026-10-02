@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { TxLink } from "./party";
 
-export function Cycles({ snapshot }: { snapshot: Snapshot }) {
+export function Cycles({ snapshot, limit }: { snapshot: Snapshot; limit?: number }) {
   if (snapshot.cycles.length === 0) {
     return (
       <Empty title="No cycles yet" body="The solver settles a cycle as soon as the open IOUs can be funded by deposits." />
@@ -25,7 +25,7 @@ export function Cycles({ snapshot }: { snapshot: Snapshot }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {snapshot.cycles.map((c) => {
+          {snapshot.cycles.slice(0, limit).map((c) => {
             const tokens = Object.keys(c.gross).filter((t) => (c.gross[t] ?? 0n) > 0n);
             const g = tokens.reduce((s, t) => s + c.gross[t]!, 0n);
             const n = tokens.reduce((s, t) => s + (c.netFunded[t] ?? 0n), 0n);

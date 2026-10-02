@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Dashboard } from "@/components/setoff/dashboard";
+import { OverviewPage } from "@/components/app/pages";
 
-export const metadata: Metadata = { title: "App" };
+export const metadata: Metadata = { title: "Overview" };
 
-export default function AppPage() {
-  return <Dashboard />;
+export default function Page() {
+  return <OverviewPage />;
 }

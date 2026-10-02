@@ -19,11 +19,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 type Bal = Awaited<ReturnType<typeof w.balances>>;
 
 export function Account({
+  part,
   snapshot,
   account,
   onConnect,
   onChange,
 }: {
+  /** "wallet": deposits, net hint, name. "bills": add a bill + your IOUs. */
+  part: "wallet" | "bills";
   snapshot: Snapshot;
   account?: Address;
   onConnect: () => void;
@@ -50,7 +53,10 @@ export function Account({
 
   if (!account) {
     return (
-      <Empty title="Connect a wallet to take part" body={`Send invoices, deposit, and withdraw what you're owed. Runs on ${net.name}.`}>
+      <Empty
+        title="Connect a wallet"
+        body={part === "wallet" ? `See your deposits and what to fund for the next cycle. Runs on ${net.name}.` : `Send invoices and record what you owe. Runs on ${net.name}.`}
+      >
         <Button className="mt-2" onClick={onConnect}>
           <Wallet aria-hidden /> Connect wallet
         </Button>
@@ -61,9 +67,9 @@ export function Account({
   const mine = (i: IOURow) => [i.debtor, i.creditor].some((a) => a.toLowerCase() === account.toLowerCase());
   const myIous = snapshot.ious.filter(mine);
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <section aria-labelledby="bal" className="flex flex-col gap-4 rounded-lg border p-6">
+  if (part === "wallet") {
+    return (
+      <section aria-labelledby="bal" className="flex max-w-2xl flex-col gap-4 rounded-lg border p-6">
         <div className="flex items-baseline justify-between gap-2">
           <h3 id="bal" className="text-base font-medium">
             Your deposits
@@ -99,7 +105,11 @@ export function Account({
         />
         <DepositForm tokens={snapshot.tokens} busy={!!busy} onSubmit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))} />
       </section>
+    );
+  }
 
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
       <section aria-labelledby="bill" className="flex flex-col gap-4 rounded-lg border p-6">
         <h3 id="bill" className="text-base font-medium">
           Add a bill
