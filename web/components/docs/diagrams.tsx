@@ -81,7 +81,7 @@ function Label({ x, y, children, anchor = "start" }: { x: number; y: number; chi
 /** Everything in the system and how a bill travels through it. */
 export function ArchitectureDiagram() {
   return (
-    <svg viewBox="0 0 990 540" className="h-auto w-full min-w-[780px]" role="img" aria-labelledby="arch-t">
+    <svg viewBox="0 0 990 540" className="h-auto w-full min-w-[700px]" role="img" aria-labelledby="arch-t">
       <title id="arch-t">
         Setoff architecture: participants post IOUs through Arc&apos;s Memo contract and deposit through Multicall3From into the Setoff
         contract; an off-chain solver reads the pool and settles cycles through Memo; the dashboard reads events.
@@ -225,7 +225,7 @@ export function CycleDiagram() {
     );
   };
   return (
-    <svg viewBox="0 0 1020 340" className="h-auto w-full min-w-[820px]" role="img" aria-labelledby="cyc-t">
+    <svg viewBox="0 0 1020 340" className="h-auto w-full min-w-[700px]" role="img" aria-labelledby="cyc-t">
       <title id="cyc-t">
         A cycle: the solver reads the pool, picks a fundable set, and sends settle through Memo; Setoff checks and settles every IOU, then
         debits net debtors and credits net creditors atomically.
