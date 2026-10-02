@@ -14,9 +14,10 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
   {
     title: "Developers",
     links: [
+      { label: "Documentation", href: "/docs" },
+      { label: "Architecture", href: "/docs/architecture" },
+      { label: "Run it locally", href: "/docs/run" },
       { label: "Source code", href: REPO, external: true },
-      { label: "Architecture", href: `${REPO}#how-it-works`, external: true },
-      { label: "Run it locally", href: `${REPO}#run-it-locally`, external: true },
       { label: "Contract", href: `${net.explorer}/address/${net.setoff}`, external: true },
     ],
   },

@@ -11,6 +11,7 @@ Card networks, CLS and DTCC already work this way behind the scenes. Setoff is t
 | Contract (Arc Testnet) | [`0x93084E5f70E48682ceFAF7041Acca4B0635962cE`](https://explorer.testnet.arc.io/address/0x93084E5f70E48682ceFAF7041Acca4B0635962cE) (verified) |
 | Contract (Arc Mainnet) | _deploying_ |
 | Dashboard | _deploying_ |
+| Docs | `/docs` on the site: architecture, contract, solver, Arc features, FAQ |
 
 ---
 

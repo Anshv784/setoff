@@ -9,6 +9,7 @@ import { Logo, REPO } from "./brand";
 const LINKS = [
   { href: "/#how", label: "How it works" },
   { href: "/#arc", label: "Built on Arc" },
+  { href: "/docs", label: "Docs" },
   { href: REPO, label: "GitHub", external: true },
 ];
 

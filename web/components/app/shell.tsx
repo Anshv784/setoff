@@ -55,6 +55,9 @@ function AppNav() {
           <NavLinks pathname={pathname} />
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <Link href="/docs" className="hidden rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline">
+            Docs
+          </Link>
           <Badge variant="outline" className="hidden sm:inline-flex">
             {net.name}
           </Badge>
