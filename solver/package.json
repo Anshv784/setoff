@@ -1,0 +1,19 @@
+{
+  "name": "setoff-solver",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "solve": "tsx src/run.ts",
+    "demo:seed": "tsx src/seed.ts",
+    "test": "tsx --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "^2.57.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
