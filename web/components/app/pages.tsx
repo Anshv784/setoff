@@ -116,11 +116,11 @@ export function ActivityPage() {
 }
 
 export function NetworkPage() {
-  const { snapshot } = useApp();
+  const { snapshot, account } = useApp();
   return (
     <>
       <PageHeader title="Who owes whom" description="Every bill as its own payment, versus only the net through Setoff." />
-      {snapshot ? <NetworkView snapshot={snapshot} /> : <Skeleton className="h-[28rem] w-full" />}
+      {snapshot ? <NetworkView snapshot={snapshot} account={account} /> : <Skeleton className="h-[34rem] w-full" />}
     </>
   );
 }
