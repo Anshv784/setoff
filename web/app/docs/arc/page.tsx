@@ -23,8 +23,8 @@ export default function Page() {
           ["USDC blocklist", "Settlement is ledger-only, and withdrawals are pull-based.", "A frozen address can't stall anyone else's cycle."],
         ]}
       />
-      <H2 id="numbers">Measured costs</H2>
-      <P>Arc&apos;s base fee was 20 gwei during development, priced in USDC.</P>
+      <H2 id="costs">What it costs</H2>
+      <P>Fees on Arc are paid in USDC. At Arc&apos;s typical base fee of 20 gwei:</P>
       <Table
         head={["Action", "Gas", "≈ USD"]}
         rows={[

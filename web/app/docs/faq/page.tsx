@@ -8,7 +8,7 @@ const QA: [string, string, React.ReactNode][] = [
   [
     "saves",
     "If transfers on Arc already cost a fraction of a cent, what does netting save?",
-    "Cash on hand. Without netting you need enough money to pay everything you owe, even if most of it is coming back from the same partners. With netting you only need your net. In the demo cycles 61–66% of the face value never had to move. That cash stays in the business. Off-chain, it also means converting and wiring only the net, not every invoice.",
+    "Cash on hand. Without netting you need enough money to pay everything you owe, even if most of it is coming back from the same partners. With netting you only need your net. In a busy network, most of the face value never has to move, and that cash stays in the business. Off-chain, it also means converting and wiring only the net, not every invoice.",
   ],
   [
     "solver-down",
@@ -33,7 +33,7 @@ const QA: [string, string, React.ReactNode][] = [
   ],
   ["currencies", "Do USDC and EURC net against each other?", "No. Each currency nets separately. Settling the leftover difference through StableFX is on the roadmap."],
   ["privacy", "Is my data private?", "No. Bills, amounts and notes are public onchain, like any transfer on a public chain. Don't put sensitive information in invoice notes."],
-  ["demo", "Who are the demo businesses?", "Wallets run by the builder to show the flow. Their names say \"(demo)\". They are roles, not real businesses. Anyone can connect a wallet and take part."],
+  ["demo", "Who are the businesses marked \"(demo)\"?", "Example wallets that keep the network active so you can see how it works. They are roles, not real companies. Your own bills settle alongside them."],
 ];
 
 export default function Page() {

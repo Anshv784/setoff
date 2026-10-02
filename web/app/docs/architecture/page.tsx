@@ -39,8 +39,7 @@ export default function Page() {
         <li>
           <strong>Settlement moves no tokens.</strong> <C>settle</C> only updates the internal ledger; tokens move on <C>deposit</C> and{" "}
           <C>withdraw</C>. On Arc, USDC is also the gas token and has a blocklist. If cycles pushed transfers, one blocklisted creditor could
-          revert everyone&apos;s settlement. With pull-based withdrawals that can&apos;t happen. (Arc&apos;s RPC rejected well-known public dev
-          keys with <C>Blocked address</C> during our testing, so this is not hypothetical.)
+          revert everyone&apos;s settlement. With pull-based withdrawals that can&apos;t happen.
         </li>
         <li>
           <strong>The pool lives onchain.</strong> IOUs are stored in contract storage, not an off-chain order book. On Arc storing one costs a

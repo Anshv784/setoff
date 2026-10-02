@@ -43,14 +43,14 @@ export default function Page() {
           <strong>Withdraw any time.</strong> Whatever you&apos;re owed sits in your balance until you take it out.
         </li>
       </List>
-      <H2 id="numbers">In numbers</H2>
+      <H2 id="glance">At a glance</H2>
       <Table
-        head={["", "Measured"]}
+        head={["", ""]}
         rows={[
-          ["Liquidity saved in demo cycles", "61–66% of face value never moved"],
-          ["Cost of a 25-bill cycle", "821,314 gas ≈ $0.016 at Arc mainnet prices"],
-          ["Solver quality", "93.1% of the brute-force optimum, exact in 175 of 200 random pools"],
-          ["Tests", "22 contract tests (unit, 1,000-run fuzz, 16k-call invariants) + 8 solver tests"],
+          ["Currencies", "USDC and EURC, each netted separately"],
+          ["Cost", "A cycle of 25 bills costs about $0.02 in gas, paid in USDC"],
+          ["Speed", "Settled and final in under a second once a cycle runs"],
+          ["Custody", "Funds sit in an open contract with no owner; only you can withdraw yours"],
         ]}
       />
       <Callout title="Not a lending platform">

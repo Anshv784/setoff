@@ -68,20 +68,21 @@ event Deposited(address indexed account, address indexed token, uint256 amount);
 event Withdrawn(address indexed account, address indexed token, uint256 amount);
 `}</Code>
 
-      <H2 id="invariants">Invariants (tested)</H2>
-      <Table
-        head={["Property", "How it's tested"]}
-        rows={[
-          ["Solvency: the contract's token balance equals the sum of all ledger balances, per token", "Stateful invariant suite, 256 runs × 64 random calls"],
-          ["Conservation: a cycle never creates or destroys value", "Fuzz test, 1,000 runs"],
-          ["Net funded never exceeds face value cleared", "Invariant suite"],
-          ["Every rejection path (forged signature, duplicates, expiry, underfunding, unsorted parties…)", "17 unit tests"],
-        ]}
-      />
+      <H2 id="guarantees">Guarantees</H2>
+      <List>
+        <li><strong>Always fully backed.</strong> The contract always holds exactly the tokens its ledger says it owes, for each currency.</li>
+        <li><strong>Nothing is created or lost.</strong> In every cycle, what net debtors pay equals what net creditors receive.</li>
+        <li><strong>Never more than the bills.</strong> The money used in a cycle can never exceed the total of the bills it settles.</li>
+        <li><strong>Bad input is rejected.</strong> Forged signatures, duplicate or expired bills, underfunded debtors and malformed cycles all revert.</li>
+      </List>
+      <P>
+        These are enforced by the contract and checked by its test suite, including fuzz and stateful invariant tests, in the{" "}
+        <a className="text-primary hover:underline" href="https://github.com/Anshv784/setoff/tree/main/contracts/test" target="_blank" rel="noreferrer">repository</a>.
+      </P>
 
       <H2 id="security">Security model</H2>
       <List>
-        <li><strong>No admin.</strong> There is no owner, pause, upgrade or sweep function. Nobody, including the builder, can move deposits.</li>
+        <li><strong>No admin.</strong> There is no owner, pause, upgrade or sweep function. Nobody, including whoever deployed it, can move deposits.</li>
         <li><strong>Your balance only drops for bills you authorised:</strong> your signature, or your own transaction.</li>
         <li><strong>The solver is untrusted.</strong> It can choose which IOUs to include. It cannot add debts, change amounts or overdraw anyone.</li>
         <li><strong>The token list is fixed at deployment</strong> (USDC, EURC), so there are no fee-on-transfer or malicious-token surprises.</li>

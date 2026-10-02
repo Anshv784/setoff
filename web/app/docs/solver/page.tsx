@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { C, Callout, Code, DocTitle, H2, List, P, Table } from "@/components/docs/ui";
+import { C, Callout, Code, DocTitle, H2, List, P } from "@/components/docs/ui";
 
 export const metadata: Metadata = { title: "Solver" };
 
@@ -26,19 +26,15 @@ export default function Page() {
         </li>
         <li><strong>Refill:</strong> retry every dropped IOU, largest first, keeping any that still fit.</li>
       </List>
-      <Callout title="Why score globally">
-        The obvious move is to drop the smallest IOU that covers the shortfall. That fails when the IOU was offsetting someone else&apos;s debt.
-        Our test case: B is short 1; dropping B→A (4) cascades until nothing settles, while dropping B→C (6) keeps 11 clearing, which is the
-        optimum.
+      <Callout title="Why look at everyone, not just the debtor">
+        The obvious move is to drop the smallest bill that covers the shortfall. But that bill may be offsetting someone else&apos;s debt, and
+        removing it can make the whole cycle fall apart. Looking at the total shortfall across everyone avoids that.
       </Callout>
-      <H2 id="quality">Measured quality</H2>
-      <Table
-        head={["Test", "Result"]}
-        rows={[
-          ["200 random 10-IOU pools vs. brute force over all 1,024 subsets", "93.1% of optimal value cleared; exact optimum in 175 / 200"],
-          ["300 random 12-IOU, 2-currency pools", "Every selection feasible; nets always sum to zero"],
-        ]}
-      />
+      <H2 id="quality">How close to perfect</H2>
+      <P>
+        On small random pools, where every possible combination can be checked, the solver clears about 93% of the best possible value and
+        finds the exact best answer most of the time. Every cycle it proposes is fully funded, and the contract checks that again anyway.
+      </P>
       <H2 id="settling">Settling</H2>
       <P>
         The solver simulates first, then sends <C>Memo.memo(Setoff, settle(ids, parties), keccak(&quot;setoff:cycle:N&quot;), summary)</C> from
