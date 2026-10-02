@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import type { Address } from "viem";
 import { useReducedMotion } from "motion/react";
 import { labelOf, tokenSymbol } from "@/lib/config";
 import type { IOURow, Snapshot } from "@/lib/data";
-import { fmtAmount, shortAddr } from "@/lib/format";
+import { fmtAgo, fmtAmount, shortAddr } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Check, ChevronDown } from "lucide-react";
 
 type View = "before" | "after";
 type Scope = "all" | "mine";
@@ -32,14 +34,13 @@ export function NetworkView({ snapshot, account }: { snapshot: Snapshot; account
   const source = picked && options.includes(picked) ? picked : options[0];
   const me = account?.toLowerCase();
 
-  const ious = useMemo(() => {
-    const rows =
-      source === "open"
-        ? snapshot.ious.filter((i) => i.status === "pending")
-        : snapshot.ious.filter((i) => i.status === "settled" && String(i.cycle) === source);
-    return scope === "mine" && me ? rows.filter((i) => i.debtor.toLowerCase() === me || i.creditor.toLowerCase() === me) : rows;
-  }, [snapshot, source, scope, me]);
-  const graph = useMemo(() => build(ious, me), [ious, me]);
+  // React Compiler memoizes these; no manual useMemo needed.
+  const rows =
+    source === "open"
+      ? snapshot.ious.filter((i) => i.status === "pending")
+      : snapshot.ious.filter((i) => i.status === "settled" && String(i.cycle) === source);
+  const ious = scope === "mine" && me ? rows.filter((i) => i.debtor.toLowerCase() === me || i.creditor.toLowerCase() === me) : rows;
+  const graph = build(ious, me);
 
   const controls = (
     <div className="flex flex-wrap items-center gap-3">
@@ -62,20 +63,40 @@ export function NetworkView({ snapshot, account }: { snapshot: Snapshot; account
         ]}
       />
       {options.length > 0 && (
-        <label className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="sr-only md:not-sr-only">Showing</span>
-          <select
-            value={source}
-            onChange={(e) => setPicked(e.target.value)}
-            className="h-9 rounded-lg border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {options.map((o) => (
-              <option key={o} value={o}>
-                {o === "open" ? "Next cycle (open bills)" : `Cycle #${o}`}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="hidden md:inline">Showing</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Choose which cycle to show"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {source === "open" ? (
+                <span className="size-1.5 rounded-full bg-primary" aria-hidden />
+              ) : (
+                <span className="font-mono text-xs text-muted-foreground">#</span>
+              )}
+              {sourceLabel(source ?? "open")}
+              <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={6} className="w-64 p-1">
+              {options.map((o) => {
+                const c = snapshot.cycles.find((x) => String(x.cycle) === o);
+                const bills = o === "open" ? snapshot.ious.filter((i) => i.status === "pending").length : Number(c?.iouCount ?? 0);
+                return (
+                  <DropdownMenuItem key={o} className="h-auto items-start gap-3 px-2.5 py-2" onClick={() => setPicked(o)}>
+                    <Check className={`mt-0.5 size-4 ${o === source ? "text-primary" : "invisible"}`} aria-hidden />
+                    <span className="flex flex-col">
+                      <span className="text-sm">{sourceLabel(o)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {bills} bills · {o === "open" ? "not settled yet" : c?.timestamp ? fmtAgo(c.timestamp, snapshot.now) : "settled"}
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       )}
     </div>
   );
@@ -313,6 +334,8 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
     </div>
   );
 }
+
+const sourceLabel = (o: string) => (o === "open" ? "Next cycle" : `Cycle #${o}`);
 
 // ---------------------------------------------------------------------- data
 
