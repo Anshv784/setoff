@@ -26,7 +26,7 @@ export function Stats({ snapshot }: { snapshot: Snapshot }) {
 
       <div className="flex flex-col gap-2" aria-hidden={gross === 0n}>
         <div className="h-3 w-full overflow-hidden rounded-full bg-muted" role="img" aria-label={`${fmtPct(bps)} of obligations netted out`}>
-          <div className="h-full rounded-full bg-foreground" style={{ width: `${Math.max(fundedPct, gross > 0n ? 1 : 0)}%` }} />
+          <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(fundedPct, gross > 0n ? 1 : 0)}%` }} />
         </div>
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>Liquidity used</span>

@@ -1,5 +1,5 @@
-import { Dashboard } from "@/components/setoff/dashboard";
+import { Landing } from "@/components/landing/landing";
 
 export default function Page() {
-  return <Dashboard />;
+  return <Landing />;
 }

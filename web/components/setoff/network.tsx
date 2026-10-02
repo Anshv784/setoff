@@ -83,7 +83,7 @@ export function NetworkView({ snapshot }: { snapshot: Snapshot }) {
               <path d="M0,0 L10,5 L0,10 z" className="fill-muted-foreground" />
             </marker>
             <marker id="arrow-strong" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" className="fill-foreground" />
+              <path d="M0,0 L10,5 L0,10 z" className="fill-primary" />
             </marker>
           </defs>
 
@@ -99,7 +99,7 @@ export function NetworkView({ snapshot }: { snapshot: Snapshot }) {
 
           {view === "after" && (
             <g>
-              <circle cx={CX} cy={CY} r={28} className="fill-background stroke-foreground" strokeWidth={1.5} />
+              <circle cx={CX} cy={CY} r={28} className="fill-background stroke-primary" strokeWidth={1.5} />
               <text x={CX} y={CY + 4} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
                 Setoff
               </text>
@@ -208,7 +208,7 @@ function Edge({
       strokeWidth={width}
       strokeLinecap="round"
       markerEnd={`url(#${strong ? "arrow-strong" : "arrow"})`}
-      className={strong ? "stroke-foreground" : "stroke-muted-foreground/70"}
+      className={strong ? "stroke-primary" : "stroke-muted-foreground/70"}
     >
       <title>{fmtAmount(amount)}</title>
     </path>

@@ -17,11 +17,11 @@ import { Stats, StatsSkeleton } from "./stats";
 import { Cycles } from "./cycles";
 import { Pool } from "./pool";
 import { Account } from "./account";
-import { HowItWorks } from "./how-it-works";
+import { SiteNav } from "@/components/site/nav";
+import { SiteFooter } from "@/components/site/footer";
 import { NetworkView } from "./network";
 
 const REFRESH_MS = 20_000;
-export const REPO = "https://github.com/Anshv784/setoff";
 
 export function Dashboard() {
   const [snapshot, setSnapshot] = useState<Snapshot>();
@@ -65,27 +65,22 @@ export function Dashboard() {
   const open = snapshot?.ious.filter((i) => i.status === "pending").length ?? 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-4 py-8 md:px-6 lg:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-semibold tracking-tight">Setoff</span>
-          <Badge variant="outline">{net.name}</Badge>
-        </div>
-        <nav className="flex items-center gap-1 text-sm">
-          {net.local ? (
-            <span className={buttonVariants({ variant: "ghost" })}>
-              Contract <span className="font-mono text-xs text-muted-foreground">{shortAddr(net.setoff)}</span>
-            </span>
-          ) : (
-            <a className={buttonVariants({ variant: "ghost" })} href={`${net.explorer}/address/${net.setoff}`} target="_blank" rel="noreferrer">
-              Contract <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{shortAddr(net.setoff)}</span>
-            </a>
-          )}
-          <a className={buttonVariants({ variant: "ghost" })} href={REPO} target="_blank" rel="noreferrer">
-            Source
+    <>
+      <SiteNav cta="none">
+        <Badge variant="outline" className="mr-1 hidden sm:inline-flex">
+          {net.name}
+        </Badge>
+        {net.local ? (
+          <span className={buttonVariants({ variant: "ghost" })}>
+            Contract <span className="font-mono text-xs text-muted-foreground">{shortAddr(net.setoff)}</span>
+          </span>
+        ) : (
+          <a className={buttonVariants({ variant: "ghost" })} href={`${net.explorer}/address/${net.setoff}`} target="_blank" rel="noreferrer">
+            Contract <span className="hidden font-mono text-xs text-muted-foreground sm:inline">{shortAddr(net.setoff)}</span>
           </a>
-        </nav>
-      </header>
+        )}
+      </SiteNav>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-4 py-10 md:px-6">
 
       <main className="flex flex-col gap-16">
         {invoiceParam && (
@@ -116,7 +111,6 @@ export function Dashboard() {
           {snapshot ? <NetworkView snapshot={snapshot} /> : <Skeleton className="h-96 w-full" />}
         </section>
 
-        <HowItWorks />
 
         <section aria-labelledby="activity" className="flex flex-col gap-6">
           <h2 id="activity" className="text-xl font-semibold">
@@ -152,13 +146,12 @@ export function Dashboard() {
         </section>
       </main>
 
-      <footer className="flex flex-col gap-2 border-t pt-6 text-xs text-muted-foreground">
-        <p>
-          Demo participants are wallets run by the builder to show the flow; their roles are labels, not real businesses. Anyone can
-          connect a wallet and take part.
-        </p>
-        <p>Open source, MIT. Unaudited; use small amounts.</p>
-      </footer>
+      <p className="text-xs text-muted-foreground">
+        Demo participants are wallets run by the builder to show the flow; their names say &quot;(demo)&quot; and are roles, not
+        real businesses. Anyone can connect a wallet and take part.
+      </p>
     </div>
+      <SiteFooter />
+    </>
   );
 }
