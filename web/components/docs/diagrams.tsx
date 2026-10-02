@@ -81,7 +81,7 @@ function Label({ x, y, children, anchor = "start" }: { x: number; y: number; chi
 /** Everything in the system and how a bill travels through it. */
 export function ArchitectureDiagram() {
   return (
-    <svg viewBox="0 0 990 540" className="h-auto w-full min-w-[700px]" role="img" aria-labelledby="arch-t">
+    <svg viewBox="0 0 990 570" className="h-auto w-full min-w-[700px]" role="img" aria-labelledby="arch-t">
       <title id="arch-t">
         Setoff architecture: participants post IOUs through Arc&apos;s Memo contract and deposit through Multicall3From into the Setoff
         contract; an off-chain solver reads the pool and settles cycles through Memo; the dashboard reads events.
@@ -92,8 +92,8 @@ export function ArchitectureDiagram() {
       <text x={20} y={22} fontSize={11} fontWeight={600} fill={T.muted} letterSpacing={1.2}>
         PARTICIPANTS
       </text>
-      <rect x={280} y={56} width={480} height={470} rx={18} fill="none" stroke={T.border} strokeDasharray="4 6" />
-      <text x={296} y={516} fontSize={11} fontWeight={600} fill={T.muted} letterSpacing={1.2}>
+      <rect x={280} y={56} width={480} height={500} rx={18} fill="none" stroke={T.border} strokeDasharray="4 6" />
+      <text x={296} y={542} fontSize={11} fontWeight={600} fill={T.muted} letterSpacing={1.2}>
         ARC · ONCHAIN
       </text>
       <text x={800} y={22} fontSize={11} fontWeight={600} fill={T.muted} letterSpacing={1.2}>
@@ -261,14 +261,22 @@ export function CycleDiagram() {
 /** Three bills, before and after netting. */
 export function NettingDiagram() {
   const pos = { A: { x: 120, y: 60 }, B: { x: 220, y: 230 }, C: { x: 20, y: 230 } } as const;
+  // Net labels sit beside each circle (A to the right, B/C below) so they never cross an arrow.
   const node = (k: keyof typeof pos, net: string, ox: number) => (
     <g>
-      <circle cx={pos[k].x + ox} cy={pos[k].y} r={22} fill={T.card} stroke={T.border} strokeWidth={1.5} />
+      <circle cx={pos[k].x + ox} cy={pos[k].y} r={22} fill={T.card} stroke={net ? T.accent : T.border} strokeWidth={1.5} />
       <text x={pos[k].x + ox} y={pos[k].y + 5} textAnchor="middle" fontSize={13} fontWeight={600} fill={T.fg}>
         {k}
       </text>
       {net && (
-        <text x={pos[k].x + ox} y={pos[k].y + 42} textAnchor="middle" fontSize={11} fill={T.muted} className="font-mono">
+        <text
+          x={pos[k].x + ox + (k === "A" ? 32 : 0)}
+          y={k === "A" ? pos[k].y + 4 : pos[k].y + 42}
+          textAnchor={k === "A" ? "start" : "middle"}
+          fontSize={11}
+          fill={T.muted}
+          className="font-mono"
+        >
           {net}
         </text>
       )}
@@ -276,7 +284,7 @@ export function NettingDiagram() {
   );
   const ox = 440;
   return (
-    <svg viewBox="0 0 720 300" className="h-auto w-full min-w-[560px]" role="img" aria-labelledby="net-t">
+    <svg viewBox="-24 0 768 300" className="h-auto w-full min-w-[560px]" role="img" aria-labelledby="net-t">
       <title id="net-t">A owes B 10, B owes C 9, C owes A 8. Netted: A pays 2; B and C each receive 1.</title>
       <Defs />
       <text x={20} y={20} fontSize={11} fontWeight={600} fill={T.muted} letterSpacing={1.2}>
