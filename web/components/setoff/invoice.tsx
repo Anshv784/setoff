@@ -7,7 +7,7 @@ import { Check, Copy, FileText, Wallet } from "lucide-react";
 import { net } from "@/lib/config";
 import { client, type Snapshot } from "@/lib/data";
 import { recipientKeys, sealNote } from "@/lib/notes-view";
-import { PrivateToggle } from "@/components/app/notes";
+import { PrivateToggle, privacyStatus } from "@/components/app/notes";
 import { decodeInvoice, invoiceUrl, newIOU, type Invoice } from "@/lib/invoice";
 import { fmtDate, fmtToken } from "@/lib/format";
 import * as w from "@/lib/wallet";
@@ -22,14 +22,16 @@ import { isAmount, TokenSelect } from "./account";
 const same = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
 /** Creditor drafts a bill and gets a link to send the debtor. No transaction, no gas. */
-export function SendInvoiceForm({ account, tokens }: { account: Address; tokens: Address[] }) {
+export function SendInvoiceForm({ account, tokens, snapshot }: { account: Address; tokens: Address[]; snapshot?: Snapshot }) {
   const [debtor, setDebtor] = useState("");
   const [token, setToken] = useState<Address>(tokens[0]!);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [keepPrivate, setKeepPrivate] = useState(true);
   const [link, setLink] = useState<string>();
   const debtorError = debtor && !isAddress(debtor) ? "Enter a valid address" : same(debtor, account) ? "You can't bill yourself" : undefined;
   const valid = isAddress(debtor) && !debtorError && isAmount(amount) && note.trim().length > 0;
+  const status = snapshot ? privacyStatus(snapshot, account, isAddress(debtor) ? debtor : undefined) : undefined;
 
   if (link) {
     return (
@@ -52,7 +54,7 @@ export function SendInvoiceForm({ account, tokens }: { account: Address; tokens:
         try {
           const { timestamp } = await client.getBlock();
           const iou = newIOU({ debtor: debtor as Address, creditor: account, token, amount, days: 7, now: timestamp });
-          setLink(invoiceUrl({ iou, note: note.trim() }));
+          setLink(invoiceUrl({ iou, note: note.trim(), private: status === "ready" && keepPrivate }));
         } catch (err) {
           toast.error(errorText(err));
         }
@@ -88,6 +90,7 @@ export function SendInvoiceForm({ account, tokens }: { account: Address; tokens:
         <Label htmlFor="inv-note">What it&apos;s for</Label>
         <Input id="inv-note" autoComplete="off" maxLength={120} placeholder="Invoice #1042, logo design" value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
+      <PrivateToggle status={status} checked={keepPrivate} onChange={setKeepPrivate} />
       <p className="text-xs text-muted-foreground">Creates a link — nothing is sent onchain until the debtor approves. Due within 7 days.</p>
       <Button type="submit" disabled={!valid}>
         Create invoice link
@@ -115,7 +118,7 @@ export function InvoiceView({
   onClose: () => void;
 }) {
   const [sig, setSig] = useState<Hex>();
-  const [keepPrivate, setKeepPrivate] = useState(true);
+  const [keepPrivate, setKeepPrivate] = useState<boolean>();
   const [status, setStatus] = useState<Status>();
   const [tick, setTick] = useState(0);
   const { busy, run } = useTx(() => {
@@ -216,7 +219,7 @@ export function InvoiceView({
                 className="self-start"
                 disabled={!!busy}
                 onClick={() => {
-                  const sealed = keepPrivate && snapshot ? sealNote(snapshot, iou.debtor, iou.creditor, inv.note) : undefined;
+                  const sealed = (keepPrivate ?? inv.private) && snapshot ? sealNote(snapshot, iou.debtor, iou.creditor, inv.note) : undefined;
                   run("Post invoice", () => w.postInvoice(account, { ...inv, note: sealed ?? inv.note }));
                 }}
               >
@@ -225,7 +228,7 @@ export function InvoiceView({
               {snapshot && (
                 <PrivateToggle
                   status={recipientKeys(snapshot, iou.debtor, iou.creditor) ? "ready" : "them"}
-                  checked={keepPrivate}
+                  checked={keepPrivate ?? !!inv.private}
                   onChange={setKeepPrivate}
                 />
               )}

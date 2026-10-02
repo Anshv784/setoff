@@ -13,7 +13,7 @@ export type IOU = {
 };
 
 /** An invoice travels as a link: the IOU, its note, and once approved, the debtor's signature. */
-export type Invoice = { iou: IOU; note: string; sig?: Hex };
+export type Invoice = { iou: IOU; note: string; sig?: Hex; /** creditor asked for a private note */ private?: boolean };
 
 export const iouTypes = {
   IOU: [
@@ -65,6 +65,7 @@ export function encodeInvoice(inv: Invoice): string {
       r: iou.ref,
       m: inv.note,
       s: inv.sig,
+      p: inv.private ? 1 : undefined,
       x: net.setoff, // bind the link to one deployment
     }),
   );
@@ -85,6 +86,7 @@ export function decodeInvoice(param: string): Invoice {
     },
     note: String(o.m ?? ""),
     sig: o.s,
+    private: o.p === 1,
   };
 }
 

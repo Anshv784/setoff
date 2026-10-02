@@ -156,7 +156,7 @@ export function Account({
             <TabsTrigger value="owe">Record what I owe</TabsTrigger>
           </TabsList>
           <TabsContent value="invoice" className="pt-4">
-            <SendInvoiceForm account={account} tokens={snapshot.tokens} />
+            <SendInvoiceForm account={account} tokens={snapshot.tokens} snapshot={snapshot} />
           </TabsContent>
           <TabsContent value="owe" className="pt-4">
             <IOUForm
