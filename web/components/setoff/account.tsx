@@ -87,17 +87,18 @@ export function Account({
                   <span className="font-mono text-xl tabular-nums">{b.deposit === undefined ? "…" : fmtToken(b.deposit, b.token)}</span>
                   <span className="text-xs text-muted-foreground">in wallet {b.wallet === undefined ? "…" : fmtToken(b.wallet, b.token)}</span>
                 </div>
-                <Button
-                  variant="outline"
-                  disabled={!b.deposit || !!busy}
-                  onClick={() => run(`Withdraw ${tokenSymbol(b.token)}`, () => w.withdraw(account, b.token, b.deposit!))}
-                >
-                  Withdraw all
-                </Button>
+                {/* eslint-disable-next-line @next/next/no-img-element -- static token mark */}
+                <img src={`/logos/${tokenSymbol(b.token).toLowerCase()}.svg`} alt="" className="size-8 opacity-80" />
               </li>
             ))}
           </ul>
-          <DepositForm tokens={snapshot.tokens} busy={!!busy} onSubmit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))} />
+          <MoveForm
+            tokens={snapshot.tokens}
+            bals={bals}
+            busy={!!busy}
+            onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
+            onWithdraw={(t, v) => run(`Withdraw ${formatUnits(v, 6)} ${tokenSymbol(t)}`, () => w.withdraw(account, t, v))}
+          />
         </section>
 
         <div className="flex flex-col gap-6">
@@ -221,28 +222,103 @@ export function Account({
   );
 }
 
-function DepositForm({ tokens, busy, onSubmit }: { tokens: Address[]; busy: boolean; onSubmit: (t: Address, amount: string) => void }) {
+function MoveForm({
+  tokens,
+  bals,
+  busy,
+  onDeposit,
+  onWithdraw,
+}: {
+  tokens: Address[];
+  bals?: Bal;
+  busy: boolean;
+  onDeposit: (t: Address, amount: string) => void;
+  onWithdraw: (t: Address, amount: bigint) => void;
+}) {
+  const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
   const [token, setToken] = useState<Address>(tokens[0]!);
   const [amount, setAmount] = useState("");
-  const valid = isAmount(amount);
+  const bal = bals?.find((b) => b.token === token);
+  const available = mode === "deposit" ? bal?.wallet : bal?.deposit;
+  const value = isAmount(amount) ? parseUnits(amount, 6) : 0n;
+  const tooMuch = available !== undefined && value > available;
+  const valid = value > 0n && !tooMuch;
+
   return (
     <form
-      className="flex flex-col gap-3 border-t border-border pt-5"
+      className="flex flex-col gap-4 border-t border-border pt-5"
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid) onSubmit(token, amount);
+        if (!valid) return;
+        if (mode === "deposit") onDeposit(token, amount);
+        else onWithdraw(token, value);
+        setAmount("");
       }}
     >
-      <div className="grid grid-cols-[1fr_auto] gap-3">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="dep-amount">Deposit amount</Label>
-          <Input id="dep-amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        </div>
-        <TokenSelect id="dep-token" tokens={tokens} value={token} onChange={setToken} />
+      <div role="tablist" aria-label="Move funds" className="inline-flex w-fit rounded-lg border border-border bg-background p-0.5">
+        {(["deposit", "withdraw"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={mode === m}
+            onClick={() => {
+              setMode(m);
+              setAmount("");
+            }}
+            className={`h-8 rounded-md px-3 text-sm capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              mode === m ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {m}
+          </button>
+        ))}
       </div>
-      <p className="text-xs text-muted-foreground">Approve and deposit happen in one transaction via Arc&apos;s Multicall3From.</p>
+      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <Label htmlFor="move-amount">Amount</Label>
+            <span className="text-xs text-muted-foreground">
+              {mode === "deposit" ? "In wallet" : "In Setoff"}: {available === undefined ? "…" : fmtToken(available, token)}
+            </span>
+          </div>
+          <div className="relative">
+            <Input
+              id="move-amount"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0.00"
+              value={amount}
+              aria-invalid={tooMuch}
+              aria-describedby={tooMuch ? "move-err" : undefined}
+              onChange={(e) => setAmount(e.target.value)}
+              className="pr-14 font-mono"
+            />
+            <button
+              type="button"
+              disabled={!available}
+              onClick={() => available !== undefined && setAmount(formatUnits(available, 6))}
+              className="absolute right-1.5 top-1/2 h-6 -translate-y-1/2 rounded px-2 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Max
+            </button>
+          </div>
+        </div>
+        <TokenSelect id="move-token" tokens={tokens} value={token} onChange={setToken} />
+      </div>
+      {tooMuch && (
+        <p id="move-err" className="text-xs text-destructive">
+          That&apos;s more than you have {mode === "deposit" ? "in your wallet" : "in Setoff"}.
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {mode === "deposit"
+          ? "Approve and deposit happen in one transaction via Arc's Multicall3From."
+          : "Withdraw any time. Only you can move your balance."}
+      </p>
       <Button type="submit" disabled={!valid || busy}>
-        Deposit
+        {mode === "deposit" ? "Deposit" : "Withdraw"}
+        {valid ? ` ${amount} ${tokenSymbol(token)}` : ""}
       </Button>
     </form>
   );
@@ -405,22 +481,35 @@ function NameRow({ account, busy, onRegister }: { account: Address; busy: boolea
   );
 }
 
+/** USDC | EURC toggle with the token marks; same height as the inputs beside it. */
 export function TokenSelect({ id, tokens, value, onChange }: { id: string; tokens: Address[]; value: Address; onChange: (t: Address) => void }) {
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>Token</Label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value as Address)}
-        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {tokens.map((t) => (
-          <option key={t} value={t}>
-            {tokenSymbol(t)}
-          </option>
-        ))}
-      </select>
+      <span id={`${id}-label`} className="text-sm font-medium leading-none">
+        Token
+      </span>
+      <div role="radiogroup" aria-labelledby={`${id}-label`} className="inline-flex h-9 rounded-lg border border-input bg-background p-0.5">
+        {tokens.map((t) => {
+          const sym = tokenSymbol(t);
+          const on = t === value;
+          return (
+            <button
+              key={t}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => onChange(t)}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                on ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- static token mark */}
+              <img src={`/logos/${sym.toLowerCase()}.svg`} alt="" className={`size-4 ${on ? "" : "opacity-60"}`} />
+              {sym}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

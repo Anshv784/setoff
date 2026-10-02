@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Address } from "viem";
-import { ArrowRight, Clock, FileSignature, Layers, Users, Wallet } from "lucide-react";
+import { ArrowRight, Clock, FileSignature, Wallet } from "lucide-react";
 import { USDC } from "@/lib/config";
 import { savedBps, totals, type IOURow } from "@/lib/data";
 import { fmtAgo, fmtAmount, fmtPct } from "@/lib/format";
@@ -127,10 +127,10 @@ export function Overview() {
       </div>
 
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border lg:grid-cols-4">
-        <Tile icon={Layers} label="Cycles settled" value={String(snapshot.cycles.length)} />
-        <Tile icon={FileSignature} label="Bills settled" value={String(t.settledIous)} />
-        <Tile icon={Users} label="Participants" value={String(participants)} />
-        <Tile icon={Wallet} label="Liquidity kept" value={`${fmtAmount(gross - moved)}`} unit="USDC" />
+        <Tile label="Cycles settled" value={String(snapshot.cycles.length)} />
+        <Tile label="Bills settled" value={String(t.settledIous)} />
+        <Tile label="Participants" value={String(participants)} />
+        <Tile label="Liquidity kept" value={`${fmtAmount(gross - moved)}`} unit="USDC" />
       </dl>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -254,18 +254,13 @@ function Mini({ label, value, unit, accent }: { label: string; value: string; un
   );
 }
 
-function Tile({ icon: Icon, label, value, unit }: { icon: typeof Layers; label: string; value: string; unit?: string }) {
+function Tile({ label, value, unit }: { icon?: unknown; label: string; value: string; unit?: string }) {
   return (
-    <div className="flex items-center gap-4 bg-card p-5">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-        <Icon className="size-5" aria-hidden />
-      </span>
-      <div className="flex flex-col gap-0.5">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="font-mono text-2xl tabular-nums">
-          {value} {unit && <span className="font-sans text-xs text-muted-foreground">{unit}</span>}
-        </dd>
-      </div>
+    <div className="flex flex-col gap-1 bg-card p-5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="text-3xl font-semibold tracking-tight tabular-nums">
+        {value} {unit && <span className="text-sm font-normal text-muted-foreground">{unit}</span>}
+      </dd>
     </div>
   );
 }

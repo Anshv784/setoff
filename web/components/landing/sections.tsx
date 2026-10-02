@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Bot, Briefcase, Check, Coins, FileSignature, Globe2, Layers, Network, Timer, Wallet, Zap } from "lucide-react";
+import { BadgeCheck, Check, Wallet } from "lucide-react";
 import { Reveal } from "@/components/site/motion";
 
 /* ---------------------------------------------------------------- built on */
@@ -49,12 +49,82 @@ function Heading({ eyebrow, title, lead, center }: { eyebrow: string; title: str
 
 /* ---------------------------------------------------------------- who for */
 
+/* Tiny line drawings, one per audience. Strokes use theme tokens; blue marks the money. */
+const ink = "var(--muted-foreground)";
+const blue = "var(--primary)";
+
+function Dot({ x, y, r = 5, accent }: { x: number; y: number; r?: number; accent?: boolean }) {
+  return <circle cx={x} cy={y} r={r} fill="var(--card)" stroke={accent ? blue : ink} strokeWidth={1.5} />;
+}
+
+function Art({ kind }: { kind: "ring" | "pair" | "fx" | "agents" }) {
+  return (
+    <svg viewBox="0 0 160 72" className="h-16 w-auto" aria-hidden>
+      <defs>
+        <marker id={`m-${kind}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,1 L9,5 L0,9 z" fill={ink} />
+        </marker>
+        <marker id={`mb-${kind}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,1 L9,5 L0,9 z" fill={blue} />
+        </marker>
+      </defs>
+      {kind === "ring" && (
+        <g fill="none" strokeWidth={1.3}>
+          <path d="M44 16 Q80 2 116 16" stroke={ink} markerEnd={`url(#m-${kind})`} />
+          <path d="M122 24 Q138 44 116 58" stroke={ink} markerEnd={`url(#m-${kind})`} />
+          <path d="M108 62 Q80 72 52 62" stroke={blue} strokeWidth={1.8} markerEnd={`url(#mb-${kind})`} />
+          <path d="M40 56 Q22 40 38 22" stroke={ink} markerEnd={`url(#m-${kind})`} />
+          <Dot x={40} y={18} />
+          <Dot x={120} y={18} />
+          <Dot x={120} y={60} />
+          <Dot x={40} y={60} accent />
+        </g>
+      )}
+      {kind === "pair" && (
+        <g fill="none" strokeWidth={1.3}>
+          <path d="M40 30 Q80 14 118 30" stroke={ink} markerEnd={`url(#m-${kind})`} />
+          <path d="M118 44 Q80 60 42 44" stroke={ink} markerEnd={`url(#m-${kind})`} />
+          <text x="80" y="17" textAnchor="middle" fontSize="10" fill={ink} className="font-mono">10</text>
+          <text x="80" y="66" textAnchor="middle" fontSize="10" fill={ink} className="font-mono">8</text>
+          <Dot x={32} y={37} r={7} accent />
+          <Dot x={128} y={37} r={7} />
+          <text x="80" y="41" textAnchor="middle" fontSize="11" fill={blue} className="font-mono">net 2</text>
+        </g>
+      )}
+      {kind === "fx" && (
+        <g fill="none" strokeWidth={1.3}>
+          <rect x="8" y="22" width="52" height="28" rx="14" stroke={ink} />
+          <text x="34" y="40" textAnchor="middle" fontSize="11" fill="var(--foreground)" className="font-mono">USDC</text>
+          <rect x="100" y="22" width="52" height="28" rx="14" stroke={ink} />
+          <text x="126" y="40" textAnchor="middle" fontSize="11" fill="var(--foreground)" className="font-mono">EURC</text>
+          <path d="M64 30 H96" stroke={ink} markerEnd={`url(#m-${kind})`} />
+          <path d="M96 42 H64" stroke={blue} strokeWidth={1.8} markerEnd={`url(#mb-${kind})`} />
+        </g>
+      )}
+      {kind === "agents" && (
+        <g fill="none" strokeWidth={1.3}>
+          <rect x="10" y="24" width="24" height="24" rx="6" stroke={ink} />
+          <rect x="68" y="24" width="24" height="24" rx="6" stroke={ink} />
+          <rect x="126" y="24" width="24" height="24" rx="6" stroke={blue} />
+          {[0, 1, 2, 3, 4].map((i) => (
+            <circle key={`a${i}`} cx={42 + i * 5} cy={36} r={1.4} fill={ink} />
+          ))}
+          {[0, 1, 2, 3, 4].map((i) => (
+            <circle key={`b${i}`} cx={100 + i * 5} cy={36} r={1.4} fill={i === 4 ? blue : ink} />
+          ))}
+          <path d="M16 36 h12 M74 36 h12 M132 36 h12" stroke={ink} strokeDasharray="2 3" />
+        </g>
+      )}
+    </svg>
+  );
+}
+
 export function WhoFor() {
   const items = [
-    { icon: Network, title: "Supplier networks", body: "Businesses that buy from and sell to each other every month." },
-    { icon: Briefcase, title: "Agencies & freelancers", body: "Studios that subcontract each other and settle up constantly." },
-    { icon: Globe2, title: "Cross-border teams", body: "Partners billing in USDC and EURC, paying only the net." },
-    { icon: Bot, title: "AI agents", body: "Software that buys services from other software, many times a day." },
+    { art: "ring" as const, title: "Supplier networks", body: "Businesses that buy from and sell to each other every month." },
+    { art: "pair" as const, title: "Agencies & freelancers", body: "Studios that subcontract each other and settle up constantly." },
+    { art: "fx" as const, title: "Cross-border teams", body: "Partners billing in USDC and EURC, paying only the net." },
+    { art: "agents" as const, title: "AI agents", body: "Software that buys services from other software, many times a day." },
   ];
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-24 md:px-6 md:py-28">
@@ -62,10 +132,10 @@ export function WhoFor() {
       <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it, i) => (
           <Reveal key={it.title} delay={i * 0.06}>
-            <li className="group flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-6 transition-colors hover:border-primary/40">
-              <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary transition-transform duration-300 group-hover:-translate-y-0.5">
-                <it.icon className="size-5" aria-hidden />
-              </span>
+            <li className="group flex h-full flex-col gap-5 rounded-2xl border border-border bg-card p-6 transition-colors hover:border-primary/40">
+              <div className="flex h-20 items-center rounded-xl border border-border/60 bg-background/60 px-3">
+                <Art kind={it.art} />
+              </div>
               <h3 className="text-lg font-medium">{it.title}</h3>
               <p className="text-sm leading-6 text-muted-foreground">{it.body}</p>
             </li>
@@ -192,7 +262,6 @@ export function Product() {
   const steps = [
     {
       n: "01",
-      icon: FileSignature,
       title: "Bill anyone with a link.",
       body: "Fill in who owes you, how much and what for. Setoff turns it into a link. The other side approves it with one free signature — no gas, no account.",
       points: ["USDC or EURC", "Invoice note stored onchain", "Either side can cancel"],
@@ -200,7 +269,6 @@ export function Product() {
     },
     {
       n: "02",
-      icon: Wallet,
       title: "Fund only what you actually owe.",
       body: "Setoff adds up everything you owe and everything you're owed, and tells you the one number to deposit. Owe 1,000 and owed 800? Deposit 200.",
       points: ["One-click deposit", "Withdraw any time", "No one else can touch your balance"],
@@ -208,7 +276,6 @@ export function Product() {
     },
     {
       n: "03",
-      icon: Layers,
       title: "One cycle settles everything.",
       body: "Every bill in the cycle clears in a single transaction. The contract checks every position itself, and if anyone is short, nothing moves at all.",
       points: ["Final in under a second", "All or nothing", "A record of every cycle"],
@@ -222,11 +289,9 @@ export function Product() {
         {steps.map((s, i) => (
           <div key={s.n} className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
             <Reveal className={`flex flex-col gap-6 ${i % 2 ? "lg:order-2" : ""}`}>
-              <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary">
-                  <s.icon className="size-5" aria-hidden />
-                </span>
-                <span className="font-mono text-sm text-muted-foreground">{s.n}</span>
+              <div className="flex items-center gap-4">
+                <span className="font-mono text-5xl font-light tracking-tight text-primary">{s.n}</span>
+                <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" aria-hidden />
               </div>
               <h3 className="text-3xl font-semibold tracking-tight text-balance">{s.title}</h3>
               <p className="max-w-md text-lg leading-8 text-muted-foreground">{s.body}</p>
@@ -255,11 +320,11 @@ export function Product() {
 
 export function ArcSection() {
   const items = [
-    { icon: Coins, title: "Gas paid in USDC", body: "One asset for fees and settlement. A full cycle costs about two cents." },
-    { icon: Zap, title: "Final in under a second", body: "Cycles can run every few minutes, and money is yours the moment it settles." },
-    { icon: FileSignature, title: "Notes on every payment", body: "Invoice text and cycle summaries are recorded onchain with Arc's Memo." },
-    { icon: BadgeCheck, title: "Names, not addresses", body: "Counterparties show up by name, verified against Arc's identity registry." },
-    { icon: Timer, title: "Never stuck on one wallet", body: "Settlement never sends tokens, so a frozen address can't hold up anyone else." },
+    { fact: "$0.02", unit: "per cycle", title: "Gas paid in USDC", body: "One asset for fees and settlement. No second token to buy." },
+    { fact: "<1s", unit: "to final", title: "Final in under a second", body: "Cycles can run every few minutes, and money is yours the moment it settles." },
+    { fact: "INV-1042", unit: "memo", mono: true, title: "Notes on every payment", body: "Invoice text and cycle summaries are recorded onchain with Arc's Memo." },
+    { fact: "Harbor ✓", unit: "not 0x4365…", title: "Names, not addresses", body: "Counterparties show up by name, verified against Arc's identity registry." },
+    { fact: "0", unit: "transfers in settle", title: "Never stuck on one wallet", body: "Settlement never sends tokens, so a frozen address can't hold up anyone else." },
   ];
   return (
     <section id="arc" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-24 md:px-6 md:py-28">
@@ -274,10 +339,11 @@ export function ArcSection() {
         <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-card">
           {items.map((it, i) => (
             <Reveal key={it.title} delay={i * 0.04}>
-              <li className="flex gap-5 p-6">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                  <it.icon className="size-5" aria-hidden />
-                </span>
+              <li className="grid gap-4 p-6 sm:grid-cols-[8.5rem_1fr] sm:items-baseline">
+                <div className="flex flex-col">
+                  <span className={`text-2xl font-semibold tracking-tight text-primary ${it.mono ? "font-mono text-lg" : ""}`}>{it.fact}</span>
+                  <span className="text-xs text-muted-foreground">{it.unit}</span>
+                </div>
                 <div className="flex flex-col gap-1.5">
                   <h3 className="font-medium">{it.title}</h3>
                   <p className="text-sm leading-6 text-muted-foreground">{it.body}</p>
