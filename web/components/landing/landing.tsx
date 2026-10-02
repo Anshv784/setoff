@@ -17,7 +17,30 @@ import { SiteFooter } from "@/components/site/footer";
 import { Reveal, SmoothScroll } from "@/components/site/motion";
 import { REPO } from "@/components/site/brand";
 
-const Globe = dynamic(() => import("./globe"), { ssr: false });
+// Start fetching the 3D globe as soon as this page's code runs, in parallel with
+// everything else, instead of waiting for the hero to render.
+const loadGlobe = () => import("./globe");
+if (typeof window !== "undefined") void loadGlobe();
+const Globe = dynamic(loadGlobe, { ssr: false });
+
+/**
+ * Drawn stand-in shown instantly at the exact size and position of the 3D sphere
+ * (diameter ≈ 69.6% of the canvas height at the camera's distance), then faded out.
+ */
+function GlobePlaceholder({ hidden }: { hidden: boolean }) {
+  return (
+    <div aria-hidden className={`pointer-events-none absolute inset-0 grid place-items-center transition-opacity duration-700 ${hidden ? "opacity-0" : "opacity-100"}`}>
+      <div
+        className="aspect-square h-[69.6%] rounded-full"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 50%, rgba(157,184,238,0.18) 0.8px, transparent 1.2px) 0 0 / 9px 9px, radial-gradient(circle at 38% 32%, #0b1a33, #050b17 70%)",
+          boxShadow: "0 0 60px 6px rgba(79,141,255,0.28), inset 0 0 40px rgba(79,141,255,0.25)",
+        }}
+      />
+    </div>
+  );
+}
 
 export function Landing() {
   return (
@@ -42,6 +65,7 @@ function Hero() {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const [p, setP] = useState(0);
+  const [globeReady, setGlobeReady] = useState(false);
   useMotionValueEvent(scrollYProgress, "change", (v) => {
     heroProgress.current = v;
     setP(v);
@@ -85,7 +109,10 @@ function Hero() {
             <CycleCard bills={bills} moved={moved} settled={settled} />
           </div>
           <div className="absolute inset-0 -z-0 opacity-50 md:relative md:inset-auto md:h-[min(82svh,700px)] md:opacity-100">
-            <Globe />
+            <GlobePlaceholder hidden={globeReady} />
+            <div className={`h-full w-full transition-opacity duration-700 ${globeReady ? "opacity-100" : "opacity-0"}`}>
+              <Globe onReady={() => setGlobeReady(true)} />
+            </div>
           </div>
         </div>
         <div

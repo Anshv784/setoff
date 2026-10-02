@@ -379,7 +379,7 @@ function Globe({ reduce }: { reduce: boolean }) {
   );
 }
 
-export default function GlobeCanvas() {
+export default function GlobeCanvas({ onReady }: { onReady?: () => void }) {
   const box = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
   const [reduce, setReduce] = useState(false);
@@ -404,6 +404,8 @@ export default function GlobeCanvas() {
         dpr={[1, 2]}
         camera={{ position: [0, 0, 3.95], fov: 40 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        // Tell the page once the first real frame is on screen, so it can swap out the placeholder.
+        onCreated={() => requestAnimationFrame(() => requestAnimationFrame(() => onReady?.()))}
       >
         <Globe reduce={reduce} />
       </Canvas>
