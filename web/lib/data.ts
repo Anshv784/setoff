@@ -5,7 +5,13 @@ import { identities, MEMO, net } from "./config";
 import { loadIdentities } from "./identity";
 import { decodeInvoice, INVOICE_REQUEST_ID, iouId, type Invoice } from "./invoice";
 
-export const client = createPublicClient({ chain: net.chain, transport: http(net.rpc, { retryCount: 3 }) });
+export const client = createPublicClient({
+  chain: net.chain,
+  // Fewer HTTP requests: reads made together go out as one multicall, and concurrent calls as one JSON-RPC batch.
+  batch: { multicall: true },
+  // The public RPC rate-limits bursts: back off and retry (400ms, 800ms, … up to ~25s).
+  transport: http(net.rpc, { retryCount: 6, retryDelay: 400, batch: { batchSize: 20, wait: 16 } }),
+});
 
 export type IOURow = {
   id: Hex;
@@ -69,17 +75,24 @@ export type Snapshot = {
 // Arc RPCs cap eth_getLogs at 10,000 blocks.
 const RANGE = 10_000n;
 
-async function logsInWindows<T>(fetchWindow: (from: bigint, to: bigint) => Promise<T[]>, head: bigint) {
+// Logs already fetched, per query: each refresh only asks for blocks after `to`.
+const logCache = new Map<string, { to: bigint; logs: unknown[] }>();
+
+/** Logs from the deploy block to `head`, in 10k-block windows, fetched incrementally. */
+export async function logsInWindows<T>(key: string, fetchWindow: (from: bigint, to: bigint) => Promise<T[]>, head: bigint): Promise<T[]> {
+  const cached = logCache.get(key) as { to: bigint; logs: T[] } | undefined;
+  const start = cached ? cached.to + 1n : net.deployBlock;
   const windows: [bigint, bigint][] = [];
-  for (let from = net.deployBlock; from <= head; from += RANGE) {
+  for (let from = start; from <= head; from += RANGE) {
     const to = from + RANGE - 1n;
     windows.push([from, to > head ? head : to]);
   }
-  const out: T[] = [];
-  for (let i = 0; i < windows.length; i += 6) {
-    const batch = await Promise.all(windows.slice(i, i + 6).map(([a, b]) => fetchWindow(a, b)));
+  const out: T[] = cached ? [...cached.logs] : [];
+  for (let i = 0; i < windows.length; i += 3) {
+    const batch = await Promise.all(windows.slice(i, i + 3).map(([a, b]) => fetchWindow(a, b)));
     for (const logs of batch) out.push(...logs);
   }
+  logCache.set(key, { to: head > (cached?.to ?? 0n) ? head : cached!.to, logs: out });
   return out;
 }
 
@@ -113,11 +126,13 @@ export async function loadSnapshot(): Promise<Snapshot> {
   );
   const [logs, memoLogs] = await Promise.all([
     logsInWindows(
+      "setoff",
       // No topic filter: Arc's RPC rejects more than ~10 topics ("requested range too large").
       async (fromBlock, toBlock) => parseEventLogs({ abi: setoffEvents, logs: await client.getLogs({ address: net.setoff, fromBlock, toBlock }), strict: true }),
       head,
     ),
     logsInWindows(
+      "memo",
       (fromBlock, toBlock) =>
         client.getLogs({
           address: MEMO,

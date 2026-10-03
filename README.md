@@ -1,6 +1,35 @@
-# Setoff
+<p align="center">
+  <img src="docs/assets/banner.png" alt="Setoff" width="760">
+</p>
 
-**Onchain multilateral netting for USDC and EURC on [Arc](https://arc.io).** People who owe each other money settle every debt at once and move only the net.
+<h2 align="center">Onchain netting for USDC and EURC on Arc</h2>
+
+<p align="center">
+  People who owe each other money settle every bill at once and move only the net.<br>
+  Bills are IOUs onchain, cycles are checked by the contract, and anyone can run the solver.
+</p>
+
+<p align="center">
+  <a href="https://explorer.testnet.arc.io/address/0x2B90b725c370548CbA9272ccEdcaff97A34330b7"><img src="https://img.shields.io/badge/contract-Arc%20Testnet-1f6feb?style=for-the-badge" alt="Contract on Arc Testnet"></a>
+  <a href="#how-it-works"><img src="https://img.shields.io/badge/how%20it%20works-docs-3884ff?style=for-the-badge" alt="How it works"></a>
+  <a href="#for-ai-agents-mcp"><img src="https://img.shields.io/badge/AI%20agents-16%20MCP%20tools-6e56cf?style=for-the-badge" alt="16 MCP tools"></a>
+  <a href="AUDIT.md"><img src="https://img.shields.io/badge/security-self%20review-e5843a?style=for-the-badge" alt="Security review"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Arc-L1-0b0f19" alt="Arc">
+  <img src="https://img.shields.io/badge/USDC-%2B%20EURC-2775ca" alt="USDC and EURC">
+  <img src="https://img.shields.io/badge/Solidity-0.8.30-363636?logo=solidity" alt="Solidity">
+  <img src="https://img.shields.io/badge/Foundry-44%20tests-b3591b" alt="Foundry">
+  <img src="https://img.shields.io/badge/TypeScript-viem-3178c6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs" alt="Next.js">
+  <img src="https://img.shields.io/badge/MCP-server-6e56cf" alt="MCP">
+  <img src="https://img.shields.io/badge/License-MIT-555" alt="MIT">
+</p>
+
+<p align="center">
+  <img src="docs/assets/hero.png" alt="Setoff landing page and app on desktop and phone" width="100%">
+</p>
 
 A owes B 10, B owes C 9, C owes A 8. That's 27 in obligations. Paid one by one, 27 moves. Through Setoff, A deposits 2 and all three debts are discharged in one transaction.
 

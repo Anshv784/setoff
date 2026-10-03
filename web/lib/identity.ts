@@ -1,6 +1,6 @@
 import { getAbiItem, type Address } from "viem";
 import { net } from "./config";
-import { client } from "./data";
+import { client, logsInWindows } from "./data";
 
 /** ERC-8004 IdentityRegistry: each identity is an NFT whose tokenURI is a registration file. */
 export const identityAbi = [
@@ -20,7 +20,6 @@ export const identityAbi = [
 
 export type Identity = { agentId: bigint; name: string };
 
-const RANGE = 10_000n;
 
 /** The registration file, stored inline as a data: URI so nothing needs hosting. */
 export function registrationURI(name: string) {
@@ -53,16 +52,9 @@ export async function loadIdentities(addresses: Address[], head: bigint): Promis
   if (addresses.length === 0) return out;
   const event = getAbiItem({ abi: identityAbi, name: "Registered" });
   const latest = new Map<string, bigint>();
-  const windows: [bigint, bigint][] = [];
-  for (let from = net.deployBlock; from <= head; from += RANGE) windows.push([from, from + RANGE - 1n > head ? head : from + RANGE - 1n]);
-  for (let i = 0; i < windows.length; i += 6) {
-    const batch = await Promise.all(
-      windows.slice(i, i + 6).map(([fromBlock, toBlock]) =>
-        client.getLogs({ address: net.identityRegistry, event, args: { owner: addresses }, fromBlock, toBlock }),
-      ),
-    );
-    for (const logs of batch) for (const l of logs) if (l.args.owner && l.args.agentId !== undefined) latest.set(l.args.owner.toLowerCase(), l.args.agentId);
-  }
+  const key = `identity:${addresses.map((a) => a.toLowerCase()).sort().join(",")}`;
+  const logs = await logsInWindows(key, (fromBlock, toBlock) => client.getLogs({ address: net.identityRegistry, event, args: { owner: addresses }, fromBlock, toBlock }), head);
+  for (const l of logs) if (l.args.owner && l.args.agentId !== undefined) latest.set(l.args.owner.toLowerCase(), l.args.agentId);
   await Promise.all(
     [...latest].map(async ([owner, agentId]) => {
       const [current, uri] = await Promise.all([
