@@ -39,11 +39,11 @@ test("agent A bills agent B; B approves and posts it; it shows up as open", asyn
   assert.equal(info.data.agent.maxAmountPerAction, "10");
 
   const inv = await a.call("create_invoice", { debtor: B_ADDR, amount: "2.25", token: "USDC", note: "MCP test: 1,000 API calls" });
-  assert.ok(!inv.error, inv.error);
+  assert.ok(!inv.error, inv.error ?? "");
   assert.match(inv.data.link, /\/app\/bills\?invoice=/);
 
   const approved = await b.call("approve_invoice", { invoice: inv.data.link, post: true });
-  assert.ok(!approved.error, approved.error);
+  assert.ok(!approved.error, approved.error ?? "");
   assert.ok(approved.data.posted.hash);
 
   const bills = await b.call("list_bills", { address: B_ADDR, status: "pending" });
@@ -69,6 +69,6 @@ test("an agent can't approve a bill that isn't addressed to it", async () => {
 test("preview_next_cycle reports what would move", async () => {
   const a = await connect(A);
   const r = await a.call("preview_next_cycle");
-  assert.ok(!r.error, r.error);
+  assert.ok(!r.error, r.error ?? "");
   assert.ok(r.data.openBills >= 1);
 });
