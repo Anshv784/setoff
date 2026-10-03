@@ -89,7 +89,7 @@ export default function Page() {
       <P>
         Bills are netted per currency, so being owed 10 EURC doesn&apos;t help pay 10.70 USDC you owe. If you opt in, a cycle can{" "}
         <strong>swap that leftover</strong> with another opted-in party whose leftover is the opposite, so neither of you deposits it. You
-        opt in per direction (for example &quot;give up EURC for USDC&quot;) with a minimum rate, set on the Wallet page a little below market.
+        opt in per direction (for example &quot;give up EURC for USDC&quot;) with a minimum rate, set under Settings on the Wallet page, a little below market.
       </P>
       <List>
         <li>The solver matches opted-in parties at a public reference rate (ECB) and skips anyone whose minimum it misses. They stay in their own currency that cycle.</li>
@@ -106,7 +106,7 @@ export default function Page() {
 
       <H2 id="private-notes">Private notes</H2>
       <P>
-        Invoice notes can be encrypted so only the debtor and creditor can read them. Each wallet turns this on once on the Wallet page: a free
+        Invoice notes can be encrypted so only the debtor and creditor can read them. Each wallet turns this on once under Settings on the Wallet page: a free
         signature creates its key, and a tiny transaction publishes the public half through Memo. When both parties have it on, &quot;Keep this
         note private&quot; is ticked by default.
       </P>

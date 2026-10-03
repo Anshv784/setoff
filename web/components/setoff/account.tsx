@@ -29,7 +29,7 @@ export function Account({
   onChange,
   noteKeys,
   onUnlock,
-  aside,
+  settings,
 }: {
   /** "wallet": deposits, net hint, name. "bills": add a bill + your IOUs. */
   part: "wallet" | "bills";
@@ -41,7 +41,8 @@ export function Account({
   noteKeys?: NoteKeys;
   onUnlock?: () => void;
   /** Extra cards for the wallet page's right column. */
-  aside?: React.ReactNode;
+  /** Settings cards shown in their own row below balances. */
+  settings?: React.ReactNode[];
 }) {
   const [bals, setBals] = useState<Bal>();
   const [billTab, setBillTab] = useState<"open" | "disputed" | "done">("open");
@@ -86,6 +87,7 @@ export function Account({
 
   if (part === "wallet") {
     return (
+      <div className="flex flex-col gap-10">
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section aria-labelledby="bal" className={card}>
           <div className="flex items-baseline justify-between gap-2">
@@ -121,6 +123,37 @@ export function Account({
             <h2 id="next" className="text-base font-medium">
               For the next cycle
             </h2>
+            <table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground">
+                <tr className="text-left">
+                  <th className="pb-2 font-normal">Open bills</th>
+                  <th className="pb-2 pl-3 text-right font-normal">You owe</th>
+                  <th className="pb-2 pl-3 text-right font-normal">Owed to you</th>
+                  <th className="pb-2 pl-3 text-right font-normal">Net</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border font-mono tabular-nums">
+                {snapshot.tokens.map((t) => {
+                  const open = myIous.filter((i) => i.status === "pending" && i.token.toLowerCase() === t.toLowerCase());
+                  const me = account.toLowerCase();
+                  const owe = open.filter((i) => i.debtor.toLowerCase() === me).reduce((x, i) => x + remainingOf(i), 0n);
+                  const owed = open.filter((i) => i.creditor.toLowerCase() === me).reduce((x, i) => x + remainingOf(i), 0n);
+                  const n = owed - owe;
+                  const amt = (v: bigint) => Number(formatUnits(v, 6)).toFixed(2);
+                  return (
+                    <tr key={t}>
+                      <td className="py-2 font-sans text-muted-foreground">{tokenSymbol(t)}</td>
+                      <td className="py-2 pl-3 text-right">{amt(owe)}</td>
+                      <td className="py-2 pl-3 text-right">{amt(owed)}</td>
+                      <td className={`py-2 pl-3 text-right ${n < 0n ? "text-amber-400" : n > 0n ? "text-primary" : ""}`}>
+                        {n < 0n ? "−" : n > 0n ? "+" : ""}
+                        {amt(n < 0n ? -n : n)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
             <NetHint
               account={account}
               snapshot={snapshot}
@@ -134,9 +167,22 @@ export function Account({
               Profile
             </h2>
             <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
-            {aside && <div className="border-t border-border pt-5">{aside}</div>}
           </section>
         </div>
+      </div>
+
+      {settings && (
+        <div className="flex flex-col gap-4">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Settings</h2>
+          <div className="grid items-start gap-6 lg:grid-cols-2">
+            {settings.map((node, i) => (
+              <div key={i} className={card}>
+                {node}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       </div>
     );
   }

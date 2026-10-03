@@ -33,30 +33,29 @@ export function WalletPage() {
   const { snapshot, account, connect, reload, noteKeys, unlockNotes, enableNotes } = useApp();
   return (
     <>
-      <PageHeader title="Wallet" description="Your deposits, what to fund for the next cycle, and your profile." />
+      <PageHeader title="Wallet" description="Your deposits, what you owe and are owed per currency, and your settings." />
       {snapshot ? <Account
           part="wallet"
           snapshot={snapshot}
           account={account}
           onConnect={connect}
           onChange={reload}
-          aside={
-            account && (
-              <>
-                <PrivateNotesCard
-                  embedded
-                  enabled={!!snapshot.noteKeys[account.toLowerCase()]}
-                  unlocked={!!noteKeys}
-                  onEnable={enableNotes}
-                  onUnlock={unlockNotes}
-                />
-                <div className="border-t border-border pt-5">
-                  <FxCard snapshot={snapshot} account={account} onChange={reload} />
-                </div>
-              </>
-            )
+          settings={
+            account
+              ? [
+                  <PrivateNotesCard
+                    key="notes"
+                    embedded
+                    enabled={!!snapshot.noteKeys[account.toLowerCase()]}
+                    unlocked={!!noteKeys}
+                    onEnable={enableNotes}
+                    onUnlock={unlockNotes}
+                  />,
+                  <FxCard key="fx" snapshot={snapshot} account={account} onChange={reload} />,
+                ]
+              : undefined
           }
-        /> : <Skeleton className="h-96 w-full max-w-2xl" />}
+        /> : <Skeleton className="h-96 w-full" />}
     </>
   );
 }

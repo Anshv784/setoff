@@ -23,7 +23,7 @@ export function PrivateToggle({ status, checked, onChange }: { status?: PrivacyS
     status === "ready"
       ? "Only you and the other party can read it. Amounts and names stay public."
       : status === "you"
-        ? "Turn on private notes on the Wallet page to use this."
+        ? "Turn on private notes under Settings on the Wallet page to use this."
         : status === "them"
           ? "The other party hasn't turned on private notes yet, so this note will be public."
           : "Enter who it's with to check if a private note is possible.";

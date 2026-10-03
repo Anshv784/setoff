@@ -77,6 +77,16 @@ sequenceDiagram
 
 ---
 
+## The app
+
+| Page | What's there |
+|---|---|
+| Overview | Your position and the network's open bills, savings and recent cycles |
+| Bills | Send an invoice or record what you owe; your open, disputed and settled bills; disputes; CSV export |
+| Wallet | Deposits and withdraw; what you owe and are owed per currency; Profile (ERC-8004 name). **Settings:** private notes, USDC↔EURC netting opt-in with a preview |
+| Credit | Grant credit lines; what you lend and can borrow; repay |
+| Network · Activity · Agents | Who owes whom, every cycle and bill, and the MCP setup for AI agents |
+
 ## Design decisions
 
 **Settlement moves no tokens.** `settle` only updates the internal ledger. Tokens move only on `deposit` and `withdraw`. This matters on Arc because USDC has a blocklist and is also the gas token. If a cycle pushed transfers, one blocklisted creditor would revert everyone's settlement. With a ledger and pull-based withdrawals, that can't happen. We hit this blocklist ourselves while testing: Arc rejects transactions from some well-known public dev keys with `Blocked address`.
