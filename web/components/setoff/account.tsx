@@ -44,6 +44,7 @@ export function Account({
   aside?: React.ReactNode;
 }) {
   const [bals, setBals] = useState<Bal>();
+  const [billTab, setBillTab] = useState<"open" | "disputed" | "done">("open");
   const [tick, setTick] = useState(0);
   const { busy, run } = useTx(() => {
     onChange();
@@ -77,6 +78,9 @@ export function Account({
 
   const mine = (i: IOURow) => [i.debtor, i.creditor].some((a) => a.toLowerCase() === account.toLowerCase());
   const myIous = snapshot.ious.filter(mine);
+  const shownIous = myIous.filter((i) =>
+    billTab === "open" ? i.status === "pending" : billTab === "disputed" ? i.status === "disputed" : !["pending", "disputed"].includes(i.status),
+  );
 
   const card = "flex flex-col gap-5 rounded-xl border border-border bg-card p-6";
 
@@ -127,11 +131,11 @@ export function Account({
           </section>
           <section aria-labelledby="name" className={card}>
             <h2 id="name" className="text-base font-medium">
-              Your name
+              Profile
             </h2>
             <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
+            {aside && <div className="border-t border-border pt-5">{aside}</div>}
           </section>
-          {aside}
         </div>
       </div>
     );
@@ -146,7 +150,7 @@ export function Account({
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-2">
-      <section aria-labelledby="bill" className={card}>
+      <section aria-labelledby="bill" className={`${card} lg:sticky lg:top-24`}>
         <h2 id="bill" className="text-base font-medium">
           Add a bill
         </h2>
@@ -207,8 +211,34 @@ export function Account({
             <p className="text-sm text-muted-foreground">Bills you send, owe or settle show up here.</p>
           </div>
         ) : (
-          <ul className="flex max-h-[26rem] flex-col divide-y divide-border overflow-y-auto rounded-lg border border-border">
-            {myIous.map((i) => {
+          <>
+          <div role="tablist" aria-label="Filter your bills" className="inline-flex w-fit rounded-lg border border-border bg-background p-0.5">
+            {(
+              [
+                ["open", "Open", myIous.filter((i) => i.status === "pending").length],
+                ["disputed", "Disputed", myIous.filter((i) => i.status === "disputed").length],
+                ["done", "Done", myIous.filter((i) => !["pending", "disputed"].includes(i.status)).length],
+              ] as const
+            ).map(([k, label, n]) => (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                aria-selected={billTab === k}
+                onClick={() => setBillTab(k)}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  billTab === k ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label} <span className="font-mono text-xs opacity-70">{n}</span>
+              </button>
+            ))}
+          </div>
+          {shownIous.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Nothing here.</p>
+          ) : (
+          <ul className="flex max-h-[min(36rem,calc(100svh-16rem))] flex-col divide-y divide-border overflow-y-auto rounded-lg border border-border">
+            {shownIous.map((i) => {
               const owe = i.debtor.toLowerCase() === account.toLowerCase();
               return (
                 <li key={i.id} className="flex flex-col gap-3 p-3">
@@ -256,6 +286,8 @@ export function Account({
               );
             })}
           </ul>
+          )}
+          </>
         )}
       </section>
     </div>

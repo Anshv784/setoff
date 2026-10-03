@@ -14,9 +14,9 @@ import { isAmount, TokenSelect } from "@/components/setoff/account";
 import { useTx } from "@/components/setoff/tx";
 import { useApp } from "./state";
 
-/** Wallet page: credit lines you grant and credit you can draw. */
-export function CreditLinesCard() {
-  const { snapshot, account, reload } = useApp();
+/** Credit page: grant lines on the left; what you lend and can borrow on the right. */
+export function CreditPanel() {
+  const { snapshot, account, reload, connect } = useApp();
   const { busy, run } = useTx(reload);
   const [deposits, setDeposits] = useState<Record<string, bigint>>({});
 
@@ -31,55 +31,103 @@ export function CreditLinesCard() {
     };
   }, [account, snapshot]);
 
-  if (!snapshot || !account) return null;
+  if (!snapshot) return null;
+  if (!account) {
+    return (
+      <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border p-8">
+        <p className="font-medium">Connect a wallet</p>
+        <p className="text-sm text-muted-foreground">Grant credit to partners you trust, or see and repay credit you&apos;ve been given.</p>
+        <Button onClick={connect}>Connect wallet</Button>
+      </div>
+    );
+  }
   const me = account.toLowerCase();
   const lending = snapshot.creditLines.filter((l) => l.lender.toLowerCase() === me && (l.limit > 0n || l.used > 0n));
   const borrowing = snapshot.creditLines.filter((l) => l.borrower.toLowerCase() === me && (l.limit > 0n || l.used > 0n));
+  const usdc = snapshot.tokens[0]!;
+  const sum = (xs: CreditLineRow[], f: (l: CreditLineRow) => bigint) => xs.filter((l) => l.token === usdc).reduce((s, l) => s + f(l), 0n);
+  const card = "flex flex-col gap-5 rounded-xl border border-border bg-card p-6";
 
   return (
-    <section aria-labelledby="credit" className="flex flex-col gap-5 rounded-xl border border-border bg-card p-6">
-      <div className="flex items-center gap-2">
-        <HandCoins className="size-4 text-muted-foreground" aria-hidden />
-        <h2 id="credit" className="text-base font-medium">
-          Credit lines
-        </h2>
-      </div>
-      <p className="text-sm leading-6 text-muted-foreground">
-        Let a partner you trust overdraw up to a limit. If they&apos;re short in a cycle, the gap is paid from <strong className="font-medium text-foreground">your deposit</strong>{" "}
-        and recorded as owed back to you. If they never repay, you lose what they drew.
-      </p>
+    <div className="grid items-start gap-6 lg:grid-cols-2">
+      <section aria-labelledby="grant" className={`${card} lg:sticky lg:top-24`}>
+        <div className="flex items-center gap-2">
+          <HandCoins className="size-4 text-muted-foreground" aria-hidden />
+          <h2 id="grant" className="text-base font-medium">
+            Grant a credit line
+          </h2>
+        </div>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Let a partner you trust overdraw up to a limit. If they&apos;re short in a cycle, the gap is paid from{" "}
+          <strong className="font-medium text-foreground">your deposit</strong> and recorded as owed back to you. Set the limit to 0 to stop new
+          draws at any time.
+        </p>
+        <GrantForm account={account} tokens={snapshot.tokens} busy={!!busy} onGrant={(b, t, v) => run("Set credit line", () => w.setCreditLine(account, b, t, v))} />
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-5 text-muted-foreground">
+          The risk is yours: if a borrower never repays, you lose what they drew. No one else in the network is affected, and there&apos;s no
+          interest.
+        </p>
+      </section>
 
-      <GrantForm account={account} tokens={snapshot.tokens} busy={!!busy} onGrant={(b, t, v) => run("Set credit line", () => w.setCreditLine(account, b, t, v))} />
+      <div className="flex flex-col gap-6">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border">
+          {[
+            ["You've lent out", fmtToken(sum(lending, (l) => l.used), usdc), `${lending.length} line${lending.length === 1 ? "" : "s"}`],
+            ["You owe lenders", fmtToken(sum(borrowing, (l) => l.used), usdc), `${borrowing.length} line${borrowing.length === 1 ? "" : "s"}`],
+          ].map(([k, v, sub]) => (
+            <div key={k} className="flex flex-col gap-1 bg-card p-5">
+              <dt className="text-xs text-muted-foreground">{k}</dt>
+              <dd className="font-mono text-xl tabular-nums">{v}</dd>
+              <dd className="text-xs text-muted-foreground">{sub}</dd>
+            </div>
+          ))}
+        </dl>
 
-      {lending.length > 0 && (
-        <LineList title="You lend" lines={lending} who="borrower">
-          {(l) => (
-            <Button variant="ghost" size="sm" disabled={!!busy || l.limit === 0n} onClick={() => run("Stop credit line", () => w.setCreditLine(account, l.borrower, l.token, 0n))}>
-              Stop
-            </Button>
+        <section aria-labelledby="lend" className={card}>
+          <h2 id="lend" className="text-base font-medium">
+            You lend
+          </h2>
+          {lending.length === 0 ? (
+            <p className="text-sm text-muted-foreground">You haven&apos;t granted any credit lines.</p>
+          ) : (
+            <LineList title="" lines={lending} who="borrower">
+              {(l) => (
+                <Button variant="ghost" size="sm" disabled={!!busy || l.limit === 0n} onClick={() => run("Stop credit line", () => w.setCreditLine(account, l.borrower, l.token, 0n))}>
+                  Stop
+                </Button>
+              )}
+            </LineList>
           )}
-        </LineList>
-      )}
+        </section>
 
-      {borrowing.length > 0 && (
-        <LineList title="You can borrow" lines={borrowing} who="lender">
-          {(l) => {
-            const canRepay = l.used < (deposits[l.token.toLowerCase()] ?? 0n) ? l.used : (deposits[l.token.toLowerCase()] ?? 0n);
-            return (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!!busy || canRepay === 0n}
-                title={l.used > 0n && canRepay === 0n ? "Deposit first to repay" : undefined}
-                onClick={() => run(`Repay ${fmtToken(canRepay, l.token)}`, () => w.repayCredit(account, l.lender, l.token, canRepay))}
-              >
-                {canRepay > 0n ? `Repay ${fmtToken(canRepay, l.token)}` : "Repay"}
-              </Button>
-            );
-          }}
-        </LineList>
-      )}
-    </section>
+        <section aria-labelledby="borrow" className={card}>
+          <h2 id="borrow" className="text-base font-medium">
+            You can borrow
+          </h2>
+          {borrowing.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nobody has granted you credit yet.</p>
+          ) : (
+            <LineList title="" lines={borrowing} who="lender">
+              {(l) => {
+                const dep = deposits[l.token.toLowerCase()] ?? 0n;
+                const canRepay = l.used < dep ? l.used : dep;
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!!busy || canRepay === 0n}
+                    title={l.used > 0n && canRepay === 0n ? "Deposit first to repay" : undefined}
+                    onClick={() => run(`Repay ${fmtToken(canRepay, l.token)}`, () => w.repayCredit(account, l.lender, l.token, canRepay))}
+                  >
+                    {canRepay > 0n ? `Repay ${fmtToken(canRepay, l.token)}` : "Repay"}
+                  </Button>
+                );
+              }}
+            </LineList>
+          )}
+        </section>
+      </div>
+    </div>
   );
 }
 
@@ -96,7 +144,7 @@ function LineList({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+      {title && <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</p>}
       <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
         {lines.map((l) => (
           <li key={`${l.lender}${l.borrower}${l.token}`} className="flex flex-col gap-2 p-3">

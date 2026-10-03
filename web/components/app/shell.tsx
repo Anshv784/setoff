@@ -16,8 +16,9 @@ export const APP_LINKS = [
   { href: "/app", label: "Overview" },
   { href: "/app/bills", label: "Bills" },
   { href: "/app/wallet", label: "Wallet" },
+  { href: "/app/credit", label: "Credit" },
+  { href: "/app/agents", label: "Agents" },
   { href: "/app/activity", label: "Activity" },
-  { href: "/app/network", label: "Network" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {

@@ -75,11 +75,14 @@ export function PrivateNotesCard({
   unlocked,
   onEnable,
   onUnlock,
+  embedded,
 }: {
   enabled: boolean;
   unlocked: boolean;
   onEnable: () => Promise<void>;
   onUnlock: () => Promise<boolean>;
+  /** Render inside another card (no border/padding of its own). */
+  embedded?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const act = async (label: string, fn: () => Promise<unknown>) => {
@@ -97,9 +100,9 @@ export function PrivateNotesCard({
   };
 
   return (
-    <section aria-labelledby="pn" className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6">
+    <section aria-labelledby="pn" className={embedded ? "flex flex-col gap-3" : "flex flex-col gap-4 rounded-xl border border-border bg-card p-6"}>
       <div className="flex items-center justify-between gap-2">
-        <h2 id="pn" className="text-base font-medium">
+        <h2 id="pn" className={embedded ? "text-sm font-medium" : "text-base font-medium"}>
           Private notes
         </h2>
         <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs ${enabled ? "border-primary/40 text-primary" : "border-border text-muted-foreground"}`}>

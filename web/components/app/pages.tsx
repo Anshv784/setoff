@@ -6,12 +6,11 @@ import { Activity } from "./activity";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Account } from "@/components/setoff/account";
-import { NetworkView } from "@/components/setoff/network";
 import { PageHeader } from "./shell";
 import { useApp } from "./state";
 import { PrivateNotesCard } from "./notes";
-import { AgentCard } from "./agent-card";
-import { CreditLinesCard } from "./credit";
+import { AgentsPanel } from "./agent-card";
+import { CreditPanel } from "./credit";
 
 
 export function OverviewPage() {
@@ -32,7 +31,7 @@ export function WalletPage() {
   const { snapshot, account, connect, reload, noteKeys, unlockNotes, enableNotes } = useApp();
   return (
     <>
-      <PageHeader title="Wallet" description="Your deposits, your net for the next cycle, and your name on Arc." />
+      <PageHeader title="Wallet" description="Your deposits, what to fund for the next cycle, and your profile." />
       {snapshot ? <Account
           part="wallet"
           snapshot={snapshot}
@@ -41,16 +40,13 @@ export function WalletPage() {
           onChange={reload}
           aside={
             account && (
-              <>
-                <PrivateNotesCard
-                  enabled={!!snapshot.noteKeys[account.toLowerCase()]}
-                  unlocked={!!noteKeys}
-                  onEnable={enableNotes}
-                  onUnlock={unlockNotes}
-                />
-                <CreditLinesCard />
-                <AgentCard />
-              </>
+              <PrivateNotesCard
+                embedded
+                enabled={!!snapshot.noteKeys[account.toLowerCase()]}
+                unlocked={!!noteKeys}
+                onEnable={enableNotes}
+                onUnlock={unlockNotes}
+              />
             )
           }
         /> : <Skeleton className="h-96 w-full max-w-2xl" />}
@@ -66,12 +62,22 @@ export function ActivityPage() {
   );
 }
 
-export function NetworkPage() {
-  const { snapshot, account } = useApp();
+
+export function CreditPage() {
+  const { snapshot } = useApp();
   return (
     <>
-      <PageHeader title="Who owes whom" description="Every bill as its own payment, versus only the net through Setoff." />
-      {snapshot ? <NetworkView snapshot={snapshot} account={account} /> : <Skeleton className="h-[34rem] w-full" />}
+      <PageHeader title="Credit" description="Lend to partners you trust from your deposit, and repay credit you've been given." />
+      {snapshot ? <CreditPanel /> : <Skeleton className="h-96 w-full" />}
+    </>
+  );
+}
+
+export function AgentsPage() {
+  return (
+    <>
+      <PageHeader title="Agents" description="Give an AI agent its own wallet and Setoff tools, within limits you set." />
+      <AgentsPanel />
     </>
   );
 }

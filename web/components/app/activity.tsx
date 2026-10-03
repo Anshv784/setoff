@@ -10,24 +10,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Party } from "@/components/setoff/party";
+import { NetworkView } from "@/components/setoff/network";
 import { isEncrypted } from "@/lib/private-notes";
 import { readNote } from "@/lib/notes-view";
 import { NoteText } from "./notes";
 import { useApp } from "./state";
 
-type Tab = "cycles" | "open" | "bills";
+type Tab = "cycles" | "open" | "bills" | "network";
 type Status = "all" | IOURow["status"];
 
 const usdcKey = USDC.toLowerCase();
 const PAGE = 25;
 
 export function Activity() {
-  const { snapshot } = useApp();
+  const { snapshot, account } = useApp();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const raw = params.get("tab");
-  const tab: Tab = raw === "open" || raw === "bills" ? raw : "cycles";
+  const tab: Tab = raw === "open" || raw === "bills" || raw === "network" ? raw : "cycles";
   const setTab = (t: Tab) => router.replace(t === "cycles" ? pathname : `${pathname}?tab=${t}`, { scroll: false });
 
   if (!snapshot) {
@@ -47,7 +48,7 @@ export function Activity() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Activity</h1>
-        <p className="text-sm text-muted-foreground">Every cycle and every bill, read live from the contract.</p>
+        <p className="text-sm text-muted-foreground">Every cycle and every bill, and who owes whom — read live from the contract.</p>
       </div>
 
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
@@ -70,6 +71,7 @@ export function Activity() {
             ["cycles", `Cycles`, snapshot.cycles.length],
             ["open", `Open bills`, open],
             ["bills", `All bills`, snapshot.ious.length],
+            ["network", `Network`, null],
           ] as const
         ).map(([k, label, n]) => (
           <button
@@ -83,13 +85,21 @@ export function Activity() {
             }`}
           >
             {label}
-            <span className={`rounded-full px-2 py-0.5 font-mono text-xs ${tab === k ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{n}</span>
+            {n !== null && (
+              <span className={`rounded-full px-2 py-0.5 font-mono text-xs ${tab === k ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{n}</span>
+            )}
             {tab === k && <span aria-hidden className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" />}
           </button>
         ))}
       </div>
 
-      {tab === "cycles" ? <CycleList snapshot={snapshot} /> : <Bills snapshot={snapshot} initial={tab === "open" ? "pending" : "all"} key={tab} />}
+      {tab === "cycles" ? (
+        <CycleList snapshot={snapshot} />
+      ) : tab === "network" ? (
+        <NetworkView snapshot={snapshot} account={account} />
+      ) : (
+        <Bills snapshot={snapshot} initial={tab === "open" ? "pending" : "all"} key={tab} />
+      )}
     </div>
   );
 }
