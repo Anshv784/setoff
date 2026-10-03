@@ -68,7 +68,7 @@ contract SetoffHandler is Test {
         if (pending.length == 0) return;
         i %= pending.length;
         bytes32 id = pending[i];
-        (Setoff.IOU memory iou, Setoff.Status st,) = setoff.getIOU(id);
+        (Setoff.IOU memory iou, Setoff.Status st,,) = setoff.getIOU(id);
         if (st != Setoff.Status.Pending) return;
         vm.prank(byCreditor ? iou.creditor : iou.debtor);
         setoff.cancel(id);
@@ -82,7 +82,7 @@ contract SetoffHandler is Test {
         bytes32[] memory buf = new bytes32[](len);
         uint256 n;
         for (uint256 j; j < len && start + j < pending.length; ++j) {
-            (, Setoff.Status st,) = setoff.getIOU(pending[start + j]);
+            (, Setoff.Status st,,) = setoff.getIOU(pending[start + j]);
             if (st == Setoff.Status.Pending) buf[n++] = pending[start + j];
         }
         if (n == 0) return;
@@ -93,7 +93,7 @@ contract SetoffHandler is Test {
         address[] memory parties = _sortedUsers();
 
         vm.recordLogs();
-        try setoff.settle(ids, parties) {
+        try setoff.settle(ids, _full(ids), parties, new Setoff.Draw[](0)) {
             ++cyclesSettled;
             _tallyCycle();
         } catch {}
@@ -109,12 +109,14 @@ contract SetoffHandler is Test {
         uint256 n;
         int256[8] memory nets; // users[4] x tokens[2]
         for (uint256 j; j < len && start + j < pending.length; ++j) {
-            (Setoff.IOU memory iou, Setoff.Status st,) = setoff.getIOU(pending[start + j]);
+            (Setoff.IOU memory iou, Setoff.Status st,, uint128 paid) = setoff.getIOU(pending[start + j]);
             if (st != Setoff.Status.Pending) continue;
             buf[n++] = pending[start + j];
             uint256 k = iou.token == address(toks[0]) ? 0 : 1;
-            nets[_userIndex(iou.debtor) * 2 + k] -= int256(uint256(iou.amount));
-            nets[_userIndex(iou.creditor) * 2 + k] += int256(uint256(iou.amount));
+            // What this cycle will actually pay: the remainder, not the face value.
+            int256 open = int256(uint256(iou.amount - paid));
+            nets[_userIndex(iou.debtor) * 2 + k] -= open;
+            nets[_userIndex(iou.creditor) * 2 + k] += open;
         }
         if (n == 0) return;
         for (uint256 u; u < 4; ++u) {
@@ -132,9 +134,122 @@ contract SetoffHandler is Test {
             ids[j] = buf[j];
         }
         vm.recordLogs();
-        setoff.settle(ids, _sortedUsers());
+        setoff.settle(ids, _full(ids), _sortedUsers(), new Setoff.Draw[](0));
         ++cyclesSettled;
         _tallyCycle();
+    }
+
+    /// Pay roughly half of each IOU in a funded window: exercises partial payments.
+    function settlePartial(uint256 start, uint256 len, uint256 frac) external {
+        if (pending.length == 0) return;
+        start %= pending.length;
+        len = bound(len, 1, 6);
+        frac = bound(frac, 1, 99);
+        bytes32[] memory buf = new bytes32[](len);
+        uint128[] memory amt = new uint128[](len);
+        uint256 n;
+        for (uint256 j; j < len && start + j < pending.length; ++j) {
+            (Setoff.IOU memory iou, Setoff.Status st,, uint128 paid) = setoff.getIOU(pending[start + j]);
+            if (st != Setoff.Status.Pending) continue;
+            uint128 pay = uint128((uint256(iou.amount - paid) * frac) / 100);
+            if (pay == 0) continue;
+            buf[n] = pending[start + j];
+            amt[n++] = pay;
+        }
+        if (n == 0) return;
+        bytes32[] memory ids = new bytes32[](n);
+        uint128[] memory amounts = new uint128[](n);
+        for (uint256 j; j < n; ++j) {
+            ids[j] = buf[j];
+            amounts[j] = amt[j];
+            (Setoff.IOU memory iou,,,) = setoff.getIOU(buf[j]);
+            // Fund the debtor generously so the partial cycle succeeds.
+            vm.prank(iou.debtor);
+            setoff.deposit(iou.token, amt[j]);
+        }
+        vm.recordLogs();
+        setoff.settle(ids, amounts, _sortedUsers(), new Setoff.Draw[](0));
+        ++cyclesSettled;
+        _tally();
+    }
+
+    /// Dispute an IOU and maybe resolve it at a random lower amount.
+    function disputeAndResolve(uint256 i, uint256 frac, bool agree) external {
+        if (pending.length == 0) return;
+        bytes32 id = pending[i % pending.length];
+        (Setoff.IOU memory iou, Setoff.Status st,, uint128 paid) = setoff.getIOU(id);
+        if (st != Setoff.Status.Pending) return;
+        vm.prank(iou.debtor);
+        setoff.dispute(id);
+        uint128 newRemaining = uint128((uint256(iou.amount - paid) * bound(frac, 0, 100)) / 100);
+        vm.prank(iou.debtor);
+        setoff.offer(id, newRemaining);
+        if (agree) {
+            vm.prank(iou.creditor);
+            setoff.offer(id, newRemaining);
+        }
+    }
+
+    /// A cycle where the debtor is fully funded by a credit line from another user.
+    function creditCycle(uint256 i, uint256 lenderSeed) external {
+        if (pending.length == 0) return;
+        bytes32 id = pending[i % pending.length];
+        (Setoff.IOU memory iou, Setoff.Status st,, uint128 paid) = setoff.getIOU(id);
+        if (st != Setoff.Status.Pending) return;
+        uint128 open = iou.amount - paid;
+        address lender = users[lenderSeed % 4];
+        if (lender == iou.debtor || lender == iou.creditor) return;
+        vm.startPrank(lender);
+        setoff.deposit(iou.token, open);
+        (uint128 limit, uint128 used) = setoff.creditLine(lender, iou.debtor, iou.token);
+        setoff.setCreditLine(iou.debtor, iou.token, limit > used + open ? limit : used + open);
+        vm.stopPrank();
+        // Only the shortfall is drawn; the debtor's own deposit is used first.
+        uint256 have = setoff.balanceOf(iou.debtor, iou.token);
+        if (have >= open) return;
+        Setoff.Draw[] memory d = new Setoff.Draw[](1);
+        d[0] = Setoff.Draw({borrower: iou.debtor, lender: lender, token: iou.token, amount: uint128(open - have)});
+        bytes32[] memory ids = new bytes32[](1);
+        ids[0] = id;
+        uint128[] memory a = new uint128[](1);
+        a[0] = open;
+        vm.recordLogs();
+        setoff.settle(ids, a, _sortedUsers(), d);
+        ++cyclesSettled;
+        _tally();
+    }
+
+    /// Repay part of any outstanding credit.
+    function repaySome(uint256 b, uint256 l, uint256 k, uint256 amt) external {
+        address borrower = users[b % 4];
+        address lender = users[l % 4];
+        address token = address(toks[k % 2]);
+        (, uint128 used) = setoff.creditLine(lender, borrower, token);
+        uint256 bal = setoff.balanceOf(borrower, token);
+        uint256 cap = used < bal ? used : bal;
+        if (cap == 0) return;
+        vm.prank(borrower);
+        setoff.repay(lender, token, uint128(bound(amt, 1, cap)));
+    }
+
+    function _tally() internal {
+        _tallyCycle();
+    }
+
+    function pendingLength() external view returns (uint256) {
+        return pending.length;
+    }
+
+    function pendingAt(uint256 i) external view returns (bytes32) {
+        return pending[i];
+    }
+
+    function _full(bytes32[] memory ids) internal view returns (uint128[] memory a) {
+        a = new uint128[](ids.length);
+        for (uint256 i; i < ids.length; ++i) {
+            (Setoff.IOU memory iou,,, uint128 paid) = setoff.getIOU(ids[i]);
+            a[i] = iou.amount - paid;
+        }
     }
 
     function _userIndex(address a) internal view returns (uint256) {
@@ -191,13 +306,17 @@ contract SetoffInvariantTest is Test {
         setoff = new Setoff(toks);
         handler = new SetoffHandler(setoff, usdc, eurc);
         targetContract(address(handler));
-        bytes4[] memory actions = new bytes4[](6);
+        bytes4[] memory actions = new bytes4[](10);
         actions[0] = SetoffHandler.deposit.selector;
         actions[1] = SetoffHandler.withdraw.selector;
         actions[2] = SetoffHandler.submit.selector;
         actions[3] = SetoffHandler.cancel.selector;
         actions[4] = SetoffHandler.settle.selector;
         actions[5] = SetoffHandler.settleFunded.selector;
+        actions[6] = SetoffHandler.settlePartial.selector;
+        actions[7] = SetoffHandler.disputeAndResolve.selector;
+        actions[8] = SetoffHandler.creditCycle.selector;
+        actions[9] = SetoffHandler.repaySome.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
     }
 
@@ -205,6 +324,15 @@ contract SetoffInvariantTest is Test {
     function invariant_solvent() public view {
         assertEq(usdc.balanceOf(address(setoff)), handler.ledgerTotal(0), "USDC ledger != holdings");
         assertEq(eurc.balanceOf(address(setoff)), handler.ledgerTotal(1), "EURC ledger != holdings");
+    }
+
+    /// No IOU is ever paid more than its face value, whatever mix of partial cycles,
+    /// disputes and credit draws happened.
+    function invariant_neverOverpaid() public view {
+        for (uint256 i; i < handler.pendingLength(); ++i) {
+            (Setoff.IOU memory iou,,, uint128 paid) = setoff.getIOU(handler.pendingAt(i));
+            assertLe(paid, iou.amount, "IOU overpaid");
+        }
     }
 
     /// Liquidity used can never exceed the face value cleared.
