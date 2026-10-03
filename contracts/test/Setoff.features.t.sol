@@ -31,13 +31,13 @@ contract SetoffFeaturesTest is SetoffTest {
 
         vm.expectEmit(address(setoff));
         emit Setoff.IOUSettled(id, 1, alice, bob, address(usdc), 4e6, 6e6, keccak256(abi.encode("invoice", uint256(1))));
-        setoff.settle(_one(id), _amt(4e6), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(_one(id), _amt(4e6), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         (Setoff.Status s,, uint128 paid) = _status(id);
         assertEq(uint8(s), uint8(Setoff.Status.Pending));
         assertEq(paid, 4e6);
         assertEq(setoff.balanceOf(bob, address(usdc)), 4e6);
 
-        setoff.settle(_one(id), _amt(6e6), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(_one(id), _amt(6e6), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         (s,, paid) = _status(id);
         assertEq(uint8(s), uint8(Setoff.Status.Settled));
         assertEq(paid, 10e6);
@@ -49,7 +49,7 @@ contract SetoffFeaturesTest is SetoffTest {
         vm.prank(alice);
         setoff.deposit(address(usdc), 20e6);
         vm.expectRevert(abi.encodeWithSelector(Setoff.OverPayment.selector, id, uint128(11e6), uint128(10e6)));
-        setoff.settle(_one(id), _amt(11e6), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(_one(id), _amt(11e6), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_duplicatePiecesCannotExceedTheBill() public {
@@ -63,9 +63,9 @@ contract SetoffFeaturesTest is SetoffTest {
         a[0] = 6e6;
         a[1] = 6e6;
         vm.expectRevert(abi.encodeWithSelector(Setoff.OverPayment.selector, id, uint128(6e6), uint128(4e6)));
-        setoff.settle(ids, a, _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, a, _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         a[1] = 4e6;
-        setoff.settle(ids, a, _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, a, _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         (Setoff.Status s,,) = _status(id);
         assertEq(uint8(s), uint8(Setoff.Status.Settled));
     }
@@ -73,13 +73,13 @@ contract SetoffFeaturesTest is SetoffTest {
     function test_zeroPaymentRejected() public {
         bytes32 id = _post(_iou(alice, bob, address(usdc), 10e6, 1));
         vm.expectRevert(Setoff.ZeroAmount.selector);
-        setoff.settle(_one(id), _amt(0), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(_one(id), _amt(0), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_amountsMustMatchIds() public {
         bytes32 id = _post(_iou(alice, bob, address(usdc), 10e6, 1));
         vm.expectRevert(Setoff.LengthMismatch.selector);
-        setoff.settle(_one(id), new uint128[](0), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(_one(id), new uint128[](0), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
     }
 
     // ------------------------------------------------------------------- disputes
@@ -96,7 +96,7 @@ contract SetoffFeaturesTest is SetoffTest {
         vm.prank(alice);
         setoff.dispute(id);
         vm.expectRevert(abi.encodeWithSelector(Setoff.NotPending.selector, id));
-        setoff.settle(_one(id), _amt(10e6), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(_one(id), _amt(10e6), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
 
         // Different offers: still frozen.
         vm.prank(alice);
@@ -121,7 +121,7 @@ contract SetoffFeaturesTest is SetoffTest {
         assertEq(uint8(s), uint8(Setoff.Status.Pending));
         assertEq(amount, 8e6);
 
-        setoff.settle(_one(id), _amt(8e6), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(_one(id), _amt(8e6), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         assertEq(setoff.balanceOf(bob, address(usdc)), 8e6);
         assertEq(setoff.balanceOf(alice, address(usdc)), 2e6);
     }
@@ -142,7 +142,7 @@ contract SetoffFeaturesTest is SetoffTest {
         bytes32 id = _post(_iou(alice, bob, address(usdc), 10e6, 1));
         vm.prank(alice);
         setoff.deposit(address(usdc), 4e6);
-        setoff.settle(_one(id), _amt(4e6), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(_one(id), _amt(4e6), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
 
         vm.prank(alice);
         setoff.dispute(id);
@@ -196,7 +196,7 @@ contract SetoffFeaturesTest is SetoffTest {
         setoff.setCreditLine(alice, address(usdc), 5e6);
         vm.stopPrank();
 
-        setoff.settle(_one(id), _amt(10e6), _sorted(alice, bob, carol), _draw(alice, carol, 4e6));
+        setoff.settle(_one(id), _amt(10e6), _sorted(alice, bob, carol), _draw(alice, carol, 4e6), new Setoff.Conversion[](0));
         assertEq(setoff.balanceOf(bob, address(usdc)), 10e6);
         assertEq(setoff.balanceOf(alice, address(usdc)), 0);
         assertEq(setoff.balanceOf(carol, address(usdc)), 16e6);
@@ -223,12 +223,12 @@ contract SetoffFeaturesTest is SetoffTest {
         address[] memory p = _sorted(alice, bob, carol);
         Setoff.Draw[] memory tooMuch = _draw(alice, carol, 6e6);
         vm.expectRevert(abi.encodeWithSelector(Setoff.OverCredit.selector, carol, alice, uint128(6e6), uint128(5e6)));
-        setoff.settle(_one(id), a, p, tooMuch);
+        setoff.settle(_one(id), a, p, tooMuch, new Setoff.Conversion[](0));
 
         // Within the line, but Carol hasn't deposited anything to lend.
         Setoff.Draw[] memory ok = _draw(alice, carol, 5e6);
         vm.expectRevert(abi.encodeWithSelector(Setoff.InsufficientDeposit.selector, carol, address(usdc), 5e6, 0));
-        setoff.settle(_one(id), a, p, ok);
+        setoff.settle(_one(id), a, p, ok, new Setoff.Conversion[](0));
     }
 
     function test_onlyTheLenderGrantsCredit() public {
@@ -261,6 +261,6 @@ contract SetoffFeaturesTest is SetoffTest {
         address[] memory p = _sorted(alice, bob, carol);
         Setoff.Draw[] memory d = _draw(alice, carol, 1e6);
         vm.expectRevert(abi.encodeWithSelector(Setoff.OverCredit.selector, carol, alice, uint128(1e6), uint128(0)));
-        setoff.settle(_one(id), a, p, d);
+        setoff.settle(_one(id), a, p, d, new Setoff.Conversion[](0));
     }
 }

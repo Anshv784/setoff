@@ -58,6 +58,10 @@ export default function Page() {
           <Link href="/docs/how-it-works#credit" className="text-primary hover:underline">More</Link>
         </li>
         <li>
+          <strong>USDC ↔ EURC netting.</strong> Opt in to swap your leftover in one currency against someone else&apos;s in the other, never below your rate.{" "}
+          <Link href="/docs/how-it-works#fx" className="text-primary hover:underline">More</Link>
+        </li>
+        <li>
           <strong>Private notes.</strong> Invoice text encrypted so only the two parties can read it.{" "}
           <Link href="/docs/how-it-works#private-notes" className="text-primary hover:underline">More</Link>
         </li>

@@ -39,13 +39,19 @@ export type CycleRow = {
   gross: Record<string, bigint>;
   netFunded: Record<string, bigint>;
   memo?: string;
+  /** USDC↔EURC conversions between opted-in parties in this cycle. */
+  fx: FxRow[];
 };
+
+export type FxRow = { account: Address; sell: Address; sellAmount: bigint; buy: Address; buyAmount: bigint };
 
 export type CreditLineRow = { lender: Address; borrower: Address; token: Address; limit: bigint; used: bigint };
 
 export type Snapshot = {
   tokens: Address[];
   creditLines: CreditLineRow[];
+  /** FX opt-ins: minimum rate (1e6 = 1:1) by `${account}:${sell}:${buy}`, lower-case. */
+  fxPrefs: Record<string, bigint>;
   /** Published private-note public keys, by lower-case address (hex, 32 bytes). */
   noteKeys: Record<string, Hex>;
   ious: IOURow[];
@@ -95,6 +101,8 @@ export async function loadSnapshot(): Promise<Snapshot> {
         "CreditLineSet",
         "CreditDrawn",
         "CreditRepaid",
+        "FxPreferenceSet",
+        "Converted",
       ].includes(x.name),
   );
   const [logs, memoLogs] = await Promise.all([
@@ -133,6 +141,8 @@ export async function loadSnapshot(): Promise<Snapshot> {
 
   const ious = new Map<Hex, IOURow>();
   const lines = new Map<string, CreditLineRow>();
+  const fxPrefs: Record<string, bigint> = {};
+  const fxByCycle = new Map<string, FxRow[]>();
   const cycles: CycleRow[] = [];
   for (const log of logs as (Log & { eventName: string; args: Record<string, unknown> })[]) {
     const a = log.args;
@@ -194,6 +204,11 @@ export async function loadSnapshot(): Promise<Snapshot> {
       const k = `${a.lender}:${a.borrower}:${a.token}`.toLowerCase();
       const line = lines.get(k);
       if (line) line.used += log.eventName === "CreditDrawn" ? (a.amount as bigint) : -(a.amount as bigint);
+    } else if (log.eventName === "FxPreferenceSet") {
+      fxPrefs[`${a.account}:${a.sell}:${a.buy}`.toLowerCase()] = BigInt(a.minRate as bigint);
+    } else if (log.eventName === "Converted") {
+      const k = String(a.cycle);
+      fxByCycle.set(k, [...(fxByCycle.get(k) ?? []), { account: a.account as Address, sell: a.sell as Address, sellAmount: a.sellAmount as bigint, buy: a.buy as Address, buyAmount: a.buyAmount as bigint }]);
     } else if (log.eventName === "CycleSettled") {
       const gross: Record<string, bigint> = {};
       const netFunded: Record<string, bigint> = {};
@@ -208,6 +223,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
         gross,
         netFunded,
         memo: memos.get(cycleMemoId(a.cycle as bigint)),
+        fx: fxByCycle.get(String(a.cycle)) ?? [],
       });
     }
   }
@@ -229,7 +245,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
     for (const [k, v] of found) identities.set(k, v);
   } catch {}
 
-  return { tokens: [...tokens], creditLines: [...lines.values()], noteKeys, ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
+  return { tokens: [...tokens], creditLines: [...lines.values()], fxPrefs, noteKeys, ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
 }
 
 /** What is still owed on a bill. */

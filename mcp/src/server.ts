@@ -50,7 +50,7 @@ export function createServer(agent = s.agentFromEnv()) {
       tokens: { USDC: s.tokenAddress("USDC"), EURC: s.tokenAddress("EURC") },
       agent: agent ? { address: agent.address, maxAmountPerAction: formatUnits(agent.maxAmount, 6) } : "read-only (no SETOFF_AGENT_PK)",
       howItWorks:
-        "Bills (IOUs) between parties are netted each cycle; each party only funds its net position. Invoices are links the debtor approves with a free signature. A cycle can pay part of a bill when the debtor is short; either party can dispute an open bill, which freezes it until both propose the same amount; lenders can grant credit lines funded from their own deposit.",
+        "Bills (IOUs) between parties are netted each cycle; each party only funds its net position. Invoices are links the debtor approves with a free signature. A cycle can pay part of a bill when the debtor is short; either party can dispute an open bill, which freezes it until both propose the same amount; lenders can grant credit lines funded from their own deposit; parties can opt in to having leftover USDC and EURC converted into each other, matched with another opted-in party at a reference rate, never below their own minimum.",
     })),
   );
 
@@ -191,6 +191,20 @@ export function createServer(agent = s.agentFromEnv()) {
       inputSchema: { borrower: address, limit: amount, token },
     },
     guard((i: { borrower: string; limit: string; token: s.Token }) => s.setCreditLine(needAgent(), { ...i, borrower: i.borrower as Address })),
+  );
+
+  server.registerTool(
+    "set_fx_preference",
+    {
+      title: "Opt in to USDC/EURC conversion",
+      description:
+        "Let cycles convert this agent's leftover in one currency into the other (e.g. owed EURC but owes USDC), matched with another opted-in party, never below min_rate. min_rate \"0\" opts out.",
+      inputSchema: {
+        sell: z.enum(["USDC", "EURC"]).describe("The currency it's willing to give up"),
+        min_rate: z.string().regex(/^\d+(\.\d{1,6})?$/).describe("Minimum units of the other currency per 1 unit sold, e.g. \"1.07\" USDC per EURC"),
+      },
+    },
+    guard((i: { sell: s.Token; min_rate: string }) => s.setFxPreference(needAgent(), { sell: i.sell, minRate: i.min_rate })),
   );
 
   server.registerTool(

@@ -271,3 +271,19 @@ export async function repayCredit(account: Address, lender: Address, token: Addr
   const w = await wallet(account);
   return confirm(await w.writeContract({ address: net.setoff, abi: setoffAbi, functionName: "repay", args: [lender, token, amount] }));
 }
+
+/** Opt in (minRate > 0) or out (0) of converting your leftover `sell` into `buy` in cycles. */
+export async function setFxPreference(account: Address, sell: Address, buy: Address, minRate: bigint) {
+  const w = await wallet(account);
+  return confirm(await w.writeContract({ address: net.setoff, abi: setoffAbi, functionName: "setFxPreference", args: [sell, buy, minRate] }));
+}
+
+/** Reference USDC per EURC (ECB rate via frankfurter.dev), or null if unavailable. */
+export async function referenceRate(): Promise<number | null> {
+  try {
+    const r = (await (await fetch("https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD")).json()) as { rates?: { USD?: number } };
+    return r.rates?.USD ?? null;
+  } catch {
+    return null;
+  }
+}

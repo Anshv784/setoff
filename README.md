@@ -8,7 +8,7 @@ Card networks, CLS and DTCC already work this way behind the scenes. Setoff is t
 
 | | |
 |---|---|
-| Contract (Arc Testnet) | [`0x78eDa3AB8eF56c4E9D96458b72f26a3a216298Ac`](https://explorer.testnet.arc.io/address/0x78eDa3AB8eF56c4E9D96458b72f26a3a216298Ac) (verified) |
+| Contract (Arc Testnet) | [`0x2B90b725c370548CbA9272ccEdcaff97A34330b7`](https://explorer.testnet.arc.io/address/0x2B90b725c370548CbA9272ccEdcaff97A34330b7) (verified) |
 | Contract (Arc Mainnet) | _deploying_ |
 | Dashboard | _deploying_ |
 | Docs | `/docs` on the site: architecture, contract, solver, Arc features, FAQ |
@@ -48,11 +48,12 @@ flowchart LR
 3. **Clear a cycle.** A solver picks a set of pending IOUs that deposits can fund and calls `settle`. The contract recomputes everyone's net position, debits net debtors and credits net creditors, all in one atomic step. If any net debtor is underfunded, the whole cycle reverts.
 4. **Withdraw.** Creditors withdraw their balance whenever they want, or leave it in to fund future cycles.
 
-Three extensions, each keeping the rule that nobody is left unpaid without having agreed to it:
+Four extensions, each keeping the rule that nobody is left unpaid without having agreed to it:
 
 - **Partial payments.** A cycle can pay part of a bill, up to what the debtor can cover; the rest stays open. No bill can ever be paid more than it's worth.
 - **Disputes, by mutual agreement.** Either party can freeze an open bill. It moves again only when both propose the same amount still owed (0 cancels it). No arbiter, no admin.
 - **Credit lines, backed by the lender.** A lender lets a borrower overdraw up to a limit. Draws come only from the lender's own deposit and are recorded as owed back; the borrower repays later. The risk stays with the lender who granted it.
+- **USDC↔EURC netting, opt-in.** If you're owed EURC but owe USDC (or the reverse), a cycle can swap that leftover with another opted-in party who has the opposite leftover, instead of each of you depositing it. You set a minimum rate per direction; the contract rejects anything below it, only converts the leftover (never a deposit), and requires the swaps to balance per token. Parties who haven't opted in are never converted.
 
 ### Inside a cycle
 
@@ -115,7 +116,7 @@ Every feature below is used in the deployed flow and checked on-chain.
 
 | Action | Gas | At mainnet price |
 |---|---|---|
-| Deploy `Setoff` | 2,598,084 | ~$0.05 |
+| Deploy `Setoff` | 3,029,503 | ~$0.06 |
 | Cycle: 6 IOUs | 323,108 | ~$0.006 |
 | Cycle: 25 IOUs | 808,323 | ~$0.016 |
 
@@ -128,8 +129,9 @@ Choosing the subset of IOUs that clears the most value while every net debtor st
 1. Start from every eligible IOU (pending, not about to expire, most urgent first, capped at 256 per cycle), counting only what's still owed on partly paid ones.
 2. While some net debtor is short, drop whichever of their IOUs leaves the **least total shortfall across all parties**. Scoring globally matters. The obvious drop is often an IOU that was offsetting someone else's debt, and removing it makes the whole cycle collapse.
 3. Retry the dropped IOUs largest-first.
-4. **Credit:** add bills whose debtor is short but has credit lines with room and lenders with spare deposit; plan one draw per lender.
-5. **Partial:** pay part of each remaining bill, up to what its debtor can still cover.
+4. **FX (opt-in):** match opted-in parties with opposite USDC/EURC leftovers at a reference rate (ECB, or `SETOFF_FX_RATE`), skipping anyone whose minimum it misses; re-select with those swaps and keep them only if the cycle is still fully funded and clears at least as much.
+5. **Credit:** add bills whose debtor is short but has credit lines with room and lenders with spare deposit; plan one draw per lender.
+6. **Partial:** pay part of each remaining bill, up to what its debtor can still cover.
 
 Against brute force over 200 random 10-IOU pools, the greedy clears **93.1% of the optimal value** and finds the exact optimum in **175 of 200** pools (`npm test` in `solver/`).
 
@@ -161,10 +163,13 @@ Every spending action is capped by `SETOFF_MAX_AMOUNT` (default 10) and refused 
 contracts/   Foundry project (Arc Foundry)
   src/Setoff.sol                 the clearinghouse
   test/Setoff.t.sol              unit + fuzz tests
+  test/Setoff.features.t.sol     partial payments, disputes, credit
+  test/Setoff.fx.t.sol           opt-in USDC↔EURC swaps
   test/Setoff.invariant.t.sol    stateful invariant suite
   script/Deploy.s.sol            deploys with the right EURC per chain
 solver/      TypeScript + viem
   src/select.ts                  cycle selection (pure, tested)
+  src/fx.ts                      opt-in FX matching and selection
   src/run.ts                     one solver pass: read → select → settle via Memo
   src/seed.ts                    demo traffic between builder-run wallets
 web/         Next.js static site and app, reads the chain directly (no backend)
@@ -193,7 +198,7 @@ npm run solve             # settle the next cycle
 ### Tests
 
 ```bash
-cd contracts && arc-forge test   # unit, fuzz (1,000 runs), invariants (256 × 64 calls) incl. partial, dispute and credit actions
+cd contracts && arc-forge test   # 44 tests: unit, fuzz (1,000 runs), invariants (256 × 64 calls) incl. partial, dispute, credit and FX actions
 cd solver && npm test            # selection tests, including the brute-force comparison
 cd web && npm test               # private-note encryption
 cd mcp && npm test               # MCP tools end to end (against ./scripts/local.sh)
@@ -209,6 +214,10 @@ arc-forge script script/Deploy.s.sol --rpc-url arc_testnet --broadcast --private
 Then set the address and deploy block in `solver/src/config.ts` and `web/lib/config.ts`, and run the solver on a schedule with `SETOFF_NETWORK` and `SOLVER_PK`.
 
 ---
+
+## Security
+
+A light self-review, not an external audit: Slither (no high or medium findings), invariant tests, and a manual checklist. See [AUDIT.md](AUDIT.md), including the accepted risks.
 
 ## Limits and next steps
 

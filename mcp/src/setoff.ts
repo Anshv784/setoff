@@ -19,8 +19,8 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { MEMO, MULTICALL3_FROM, network, USDC } from "../../solver/src/config.ts";
-import { loadBalances, loadCreditLines, loadPool, publicClient } from "../../solver/src/chain.ts";
-import { selectCycle } from "../../solver/src/select.ts";
+import { loadBalances, loadCreditLines, loadFxPrefs, loadPool, publicClient } from "../../solver/src/chain.ts";
+import { referenceRate, selectWithFx } from "../../solver/src/fx.ts";
 import { setoffAbi } from "../../solver/src/setoffAbi.ts";
 import { memoAbi } from "../../solver/src/memoAbi.ts";
 
@@ -199,14 +199,16 @@ export async function previewNextCycle() {
   if (pool.length === 0) return { openBills: 0, message: "No open bills." };
   const lines = await loadCreditLines(client, net);
   const balances = await loadBalances(client, net, pool, lines.map((l) => l.lender));
-  const { timestamp } = await client.getBlock();
-  const cycle = selectCycle(pool, balances, timestamp, undefined, lines);
+  const [{ timestamp }, prefs, rate] = await Promise.all([client.getBlock(), loadFxPrefs(client, net), referenceRate()]);
+  const cycle = selectWithFx(pool, balances, timestamp, lines, prefs, tokenAddress("USDC"), tokenAddress("EURC"), rate);
   if (!cycle) return { openBills: pool.length, settleable: 0, message: "No fundable cycle yet: some net debtors haven't deposited enough." };
   return {
     openBills: pool.length,
     settleable: cycle.ids.length,
     paidInPart: cycle.partial,
     creditDraws: cycle.draws.length,
+    currencySwaps: cycle.fx.map((c) => ({ account: c.account, sells: `${fmt(c.sellAmount)} ${tokenSymbol(c.sell)}`, gets: `${fmt(c.buyAmount)} ${tokenSymbol(c.buy)}` })),
+    referenceRate: rate ? `${formatUnits(rate, 6)} USDC per EURC` : "unavailable",
     perToken: [...cycle.gross.entries()].map(([t, g]) => ({
       token: tokenSymbol(t),
       cleared: fmt(g),
@@ -369,6 +371,16 @@ export async function setCreditLine(agent: Agent, input: { borrower: Address; li
   const limit = parseUnits(input.limit, 6);
   if (limit > 0n) checkCap(agent, limit);
   return send(agent, { address: net.setoff, abi: setoffAbi, functionName: "setCreditLine", args: [input.borrower, tokenAddress(input.token), limit] });
+}
+
+/**
+ * Opt in to converting this agent's leftover `sell` into `buy` in cycles, never below
+ * `minRate` (`buy` per 1 `sell`). minRate "0" opts out.
+ */
+export async function setFxPreference(agent: Agent, input: { sell: Token; minRate: string }) {
+  const buy: Token = input.sell === "USDC" ? "EURC" : "USDC";
+  const minRate = parseUnits(input.minRate, 6);
+  return send(agent, { address: net.setoff, abi: setoffAbi, functionName: "setFxPreference", args: [tokenAddress(input.sell), tokenAddress(buy), minRate] });
 }
 
 /** Repay a lender from this agent's Setoff balance. */

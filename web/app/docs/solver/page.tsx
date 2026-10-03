@@ -26,6 +26,10 @@ export default function Page() {
         </li>
         <li><strong>Refill:</strong> retry every dropped IOU, largest first, keeping any that still fit.</li>
         <li>
+          <strong>FX (opt-in):</strong> pair parties who opted in and have opposite USDC/EURC leftovers, at a reference rate both minimums
+          accept. Re-select with those swaps, and keep them only if the cycle is still fully funded and clears at least as much.
+        </li>
+        <li>
           <strong>Credit:</strong> for each bill still left out, check whether the debtor has credit lines whose lenders have room and spare
           deposit. If together they cover the gap, add the bill and plan the draws (one per lender).
         </li>

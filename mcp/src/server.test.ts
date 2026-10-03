@@ -42,6 +42,7 @@ test("exposes the tools", async () => {
     "record_iou",
     "repay_credit",
     "set_credit_line",
+    "set_fx_preference",
     "setoff_info",
     "withdraw",
   ]);

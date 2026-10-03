@@ -85,6 +85,25 @@ export default function Page() {
         affected, and there&apos;s no interest: Setoff only records what was lent and repaid.
       </Callout>
 
+      <H2 id="fx">USDC ↔ EURC netting (opt-in)</H2>
+      <P>
+        Bills are netted per currency, so being owed 10 EURC doesn&apos;t help pay 10.70 USDC you owe. If you opt in, a cycle can{" "}
+        <strong>swap that leftover</strong> with another opted-in party whose leftover is the opposite, so neither of you deposits it. You
+        opt in per direction (for example &quot;give up EURC for USDC&quot;) with a minimum rate, set on the Wallet page a little below market.
+      </P>
+      <List>
+        <li>The solver matches opted-in parties at a public reference rate (ECB) and skips anyone whose minimum it misses. They stay in their own currency that cycle.</li>
+        <li>
+          The contract checks every swap against the account&apos;s own minimum, requires what&apos;s sold to equal what&apos;s bought in each
+          currency, and only converts the leftover, never a deposit.
+        </li>
+        <li>Parties who haven&apos;t opted in are never converted. Set the minimum to 0 to opt out.</li>
+      </List>
+      <Callout kind="warn" title="Your minimum is your worst case">
+        Anyone can run a cycle, so a swap can happen at exactly your minimum, and the other party keeps the difference. Keep it close to market.
+        Market makers through Circle&apos;s StableFX would be the next step for leftovers that have no match.
+      </Callout>
+
       <H2 id="private-notes">Private notes</H2>
       <P>
         Invoice notes can be encrypted so only the debtor and creditor can read them. Each wallet turns this on once on the Wallet page: a free

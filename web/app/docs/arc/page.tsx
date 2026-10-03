@@ -28,7 +28,7 @@ export default function Page() {
       <Table
         head={["Action", "Gas", "≈ USD"]}
         rows={[
-          ["Deploy Setoff", "2,598,084", "$0.05"],
+          ["Deploy Setoff", "3,029,503", "$0.06"],
           ["Settle 6 IOUs", "323,108", "$0.006"],
           ["Settle 25 IOUs", "808,323", "$0.016"],
           ["Partial payment cycle (1 IOU)", "115,629", "$0.002"],

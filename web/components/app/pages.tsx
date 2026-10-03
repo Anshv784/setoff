@@ -10,6 +10,7 @@ import { PageHeader } from "./shell";
 import { useApp } from "./state";
 import { NetworkView } from "@/components/setoff/network";
 import { PrivateNotesCard } from "./notes";
+import { FxCard } from "./fx";
 import { AgentsPanel } from "./agent-card";
 import { CreditPanel } from "./credit";
 
@@ -41,13 +42,18 @@ export function WalletPage() {
           onChange={reload}
           aside={
             account && (
-              <PrivateNotesCard
-                embedded
-                enabled={!!snapshot.noteKeys[account.toLowerCase()]}
-                unlocked={!!noteKeys}
-                onEnable={enableNotes}
-                onUnlock={unlockNotes}
-              />
+              <>
+                <PrivateNotesCard
+                  embedded
+                  enabled={!!snapshot.noteKeys[account.toLowerCase()]}
+                  unlocked={!!noteKeys}
+                  onEnable={enableNotes}
+                  onUnlock={unlockNotes}
+                />
+                <div className="border-t border-border pt-5">
+                  <FxCard snapshot={snapshot} account={account} onChange={reload} />
+                </div>
+              </>
             )
           }
         /> : <Skeleton className="h-96 w-full max-w-2xl" />}

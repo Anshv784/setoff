@@ -20,7 +20,7 @@ export default function Page() {
       <Table
         head={["Component", "Where", "Responsibility", "Trust"]}
         rows={[
-          [<strong key="a">Setoff contract</strong>, "Arc", "IOU pool (incl. partial payments and disputes), deposit ledger, credit lines, cycle verification and settlement", "The only source of truth. No owner, no admin, no upgrade path."],
+          [<strong key="a">Setoff contract</strong>, "Arc", "IOU pool (incl. partial payments and disputes), deposit ledger, credit lines, opt-in FX swaps, cycle verification and settlement", "The only source of truth. No owner, no admin, no upgrade path."],
           ["Memo", "Arc (system)", "Wraps calls so the sender is preserved and attaches an indexed note", "Arc protocol contract"],
           ["Multicall3From", "Arc (system)", "Batches approve + deposit with the wallet as sender", "Arc protocol contract"],
           ["ERC-8004 registry", "Arc", "Names for addresses; the dashboard verifies current ownership", "Display only"],

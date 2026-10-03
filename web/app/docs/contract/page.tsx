@@ -10,7 +10,7 @@ export default function Page() {
       <DocTitle
         eyebrow="Design"
         title="Smart contract"
-        lead="Setoff.sol: one contract, no owner, no upgrades. It stores IOUs, holds deposits, verifies and applies cycles, resolves disputes by agreement, and tracks credit lines."
+        lead="Setoff.sol: one contract, no owner, no upgrades. It stores IOUs, holds deposits, verifies and applies cycles, resolves disputes by agreement, tracks credit lines, and applies opt-in USDC↔EURC swaps."
       />
 
       <H2 id="iou">The IOU</H2>
@@ -39,9 +39,10 @@ struct IOU {
           [<C key="2">cancel(id)</C>, "debtor or creditor", "Withdraws (debtor) or rejects (creditor) a pending IOU."],
           [<C key="3">deposit(token, amount)</C>, "anyone", "Moves tokens in and credits your balance."],
           [<C key="4">withdraw(token, amount)</C>, "balance owner", "Moves tokens out, up to your balance."],
-          [<C key="5">settle(ids, amounts, parties, draws)</C>, "anyone", "Applies a cycle: pays each IOU the given amount (partial or full), applies credit draws, then nets. Reverts unless every net debtor is covered."],
+          [<C key="5">settle(ids, amounts, parties, draws, fx)</C>, "anyone", "Applies a cycle: pays each IOU the given amount (partial or full), applies credit draws, nets, then applies opt-in USDC↔EURC swaps. Reverts unless every net debtor is covered and the swaps balance per token."],
           [<C key="5a">dispute(id)</C>, "debtor or creditor", "Freezes an open IOU so no cycle can pay it."],
           [<C key="5b">offer(id, remaining)</C>, "debtor or creditor", "Proposes what is still owed on a disputed IOU. Matching offers reopen it at that amount; 0 cancels it."],
+          [<C key="5f">setFxPreference(sell, buy, minRate)</C>, "anyone", "Opts in to having your leftover sell converted into buy in cycles, never below minRate (buy per sell, 1e6 = 1:1). 0 opts out."],
           [<C key="5c">setCreditLine(borrower, token, limit)</C>, "lender", "Lets a borrower overdraw up to limit, funded from the lender's deposit. 0 stops new draws."],
           [<C key="5d">repay(lender, token, amount)</C>, "borrower", "Repays credit from the borrower's balance."],
           [<C key="6">getIOU(id)</C>, "view", "Returns the IOU (current amount), its status, the last cycle that paid it, and how much is paid."],

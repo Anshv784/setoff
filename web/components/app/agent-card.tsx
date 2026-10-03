@@ -14,6 +14,7 @@ const TOOLS: [string, string][] = [
   ["deposit · withdraw", "Fund its net; take money back"],
   ["dispute_bill · propose_amount", "Freeze a bill; settle it by agreement"],
   ["set_credit_line · repay_credit", "Lend to trusted parties; repay lenders"],
+  ["set_fx_preference", "Opt in to USDC↔EURC netting, with a minimum rate"],
   ["setoff_info", "Network, contract and its own limit"],
 ];
 

@@ -93,7 +93,7 @@ contract SetoffHandler is Test {
         address[] memory parties = _sortedUsers();
 
         vm.recordLogs();
-        try setoff.settle(ids, _full(ids), parties, new Setoff.Draw[](0)) {
+        try setoff.settle(ids, _full(ids), parties, new Setoff.Draw[](0), new Setoff.Conversion[](0)) {
             ++cyclesSettled;
             _tallyCycle();
         } catch {}
@@ -134,7 +134,7 @@ contract SetoffHandler is Test {
             ids[j] = buf[j];
         }
         vm.recordLogs();
-        setoff.settle(ids, _full(ids), _sortedUsers(), new Setoff.Draw[](0));
+        setoff.settle(ids, _full(ids), _sortedUsers(), new Setoff.Draw[](0), new Setoff.Conversion[](0));
         ++cyclesSettled;
         _tallyCycle();
     }
@@ -168,7 +168,7 @@ contract SetoffHandler is Test {
             setoff.deposit(iou.token, amt[j]);
         }
         vm.recordLogs();
-        setoff.settle(ids, amounts, _sortedUsers(), new Setoff.Draw[](0));
+        setoff.settle(ids, amounts, _sortedUsers(), new Setoff.Draw[](0), new Setoff.Conversion[](0));
         ++cyclesSettled;
         _tally();
     }
@@ -214,9 +214,35 @@ contract SetoffHandler is Test {
         uint128[] memory a = new uint128[](1);
         a[0] = open;
         vm.recordLogs();
-        setoff.settle(ids, a, _sortedUsers(), d);
+        setoff.settle(ids, a, _sortedUsers(), d, new Setoff.Conversion[](0));
         ++cyclesSettled;
         _tally();
+    }
+
+    /// Cross-currency pair between two opted-in users: a owes b USDC, b owes a EURC, and
+    /// the leftovers convert into each other at whatever rate the amounts imply.
+    function fxCycle(uint256 a, uint256 usd, uint256 eur) external {
+        a %= 4;
+        uint256 b = (a + 1) % 4;
+        uint256 n0 = pending.length;
+        this.submit(a, 0, 0, usd); // c=0 → creditor a+1, token USDC
+        this.submit(b, 2, 1, eur); // creditor b+3 = a, token EURC
+        bytes32[] memory ids = new bytes32[](2);
+        ids[0] = pending[n0];
+        ids[1] = pending[n0 + 1];
+        uint128[] memory amt = _full(ids);
+        vm.prank(users[a]);
+        setoff.setFxPreference(address(toks[1]), address(toks[0]), 1);
+        vm.prank(users[b]);
+        setoff.setFxPreference(address(toks[0]), address(toks[1]), 1);
+        Setoff.Conversion[] memory fx = new Setoff.Conversion[](2);
+        fx[0] = Setoff.Conversion(users[a], address(toks[1]), address(toks[0]), amt[1], amt[0]);
+        fx[1] = Setoff.Conversion(users[b], address(toks[0]), address(toks[1]), amt[0], amt[1]);
+        vm.recordLogs();
+        try setoff.settle(ids, amt, _sortedUsers(), new Setoff.Draw[](0), fx) {
+            ++cyclesSettled;
+            _tallyCycle();
+        } catch {}
     }
 
     /// Repay part of any outstanding credit.
@@ -306,7 +332,7 @@ contract SetoffInvariantTest is Test {
         setoff = new Setoff(toks);
         handler = new SetoffHandler(setoff, usdc, eurc);
         targetContract(address(handler));
-        bytes4[] memory actions = new bytes4[](10);
+        bytes4[] memory actions = new bytes4[](11);
         actions[0] = SetoffHandler.deposit.selector;
         actions[1] = SetoffHandler.withdraw.selector;
         actions[2] = SetoffHandler.submit.selector;
@@ -317,6 +343,7 @@ contract SetoffInvariantTest is Test {
         actions[7] = SetoffHandler.disputeAndResolve.selector;
         actions[8] = SetoffHandler.creditCycle.selector;
         actions[9] = SetoffHandler.repaySome.selector;
+        actions[10] = SetoffHandler.fxCycle.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
     }
 

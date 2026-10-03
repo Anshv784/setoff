@@ -1,4 +1,5 @@
 import { createPublicClient, getAbiItem, http, type Address, type Hex } from "viem";
+import type { FxPref } from "./fx.ts";
 import { setoffAbi } from "./setoffAbi.ts";
 import { LOG_RANGE, type Network } from "./config.ts";
 import { balanceKey, type Balances, type CreditLine, type PendingIOU } from "./select.ts";
@@ -92,4 +93,19 @@ export async function loadCreditLines(client: Client, net: Network): Promise<Cre
       return { ...l, available: limit > used ? limit - used : 0n };
     })
     .filter((l) => l.available > 0n);
+}
+
+/** Current FX opt-ins, discovered from FxPreferenceSet events (0 = opted out, dropped). */
+export async function loadFxPrefs(client: Client, net: Network): Promise<FxPref[]> {
+  const head = await client.getBlockNumber({ cacheTime: 0 });
+  const event = getAbiItem({ abi: setoffAbi, name: "FxPreferenceSet" });
+  const seen = new Map<string, FxPref>();
+  for (let from = net.deployBlock; from <= head; from += LOG_RANGE) {
+    const to = from + LOG_RANGE - 1n > head ? head : from + LOG_RANGE - 1n;
+    for (const l of await client.getLogs({ address: net.setoff, event, fromBlock: from, toBlock: to })) {
+      const { account, sell, buy, minRate } = l.args;
+      if (account && sell && buy && minRate !== undefined) seen.set(`${account}:${sell}:${buy}`.toLowerCase(), { account, sell, buy, minRate: BigInt(minRate) });
+    }
+  }
+  return [...seen.values()].filter((p) => p.minRate > 0n);
 }

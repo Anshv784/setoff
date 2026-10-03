@@ -9,7 +9,7 @@ export default function Page() {
       <DocTitle
         eyebrow="Developers"
         title="For AI agents"
-        lead="Setoff ships an MCP server with 14 tools, so any AI agent can bill other agents, approve what it owes, fund its net, settle disputes and manage credit, in plain language."
+        lead="Setoff ships an MCP server with 15 tools, so any AI agent can bill other agents, approve what it owes, fund its net, settle disputes, manage credit and opt in to currency netting, in plain language."
       />
 
       <H2 id="why">Why agents need netting</H2>

@@ -59,6 +59,16 @@ contract Setoff is EIP712 {
         uint128 amount;
     }
 
+    /// @notice A currency swap between opted-in parties inside a cycle: `account` gives up
+    ///         `sellAmount` of its net position in `sell` for `buyAmount` of `buy`.
+    struct Conversion {
+        address account;
+        address sell;
+        address buy;
+        uint128 sellAmount;
+        uint128 buyAmount;
+    }
+
     struct CreditLine {
         uint128 limit;
         uint128 used; // drawn and not yet repaid
@@ -75,6 +85,9 @@ contract Setoff is EIP712 {
     mapping(address account => mapping(address token => uint256)) public balanceOf;
     mapping(bytes32 id => Record) internal _records;
     mapping(address lender => mapping(address borrower => mapping(address token => CreditLine))) public creditLine;
+    /// @notice Minimum rate an account accepts to convert `sell` into `buy`, as buy units
+    ///         per 1 sell unit scaled by 1e6 (e.g. 1.07e6 = 1.07 USDC per EURC). 0 = never.
+    mapping(address account => mapping(address sell => mapping(address buy => uint64))) public fxMinRate;
     uint64 public cycleCount;
 
     event Deposited(address indexed account, address indexed token, uint256 amount);
@@ -115,6 +128,10 @@ contract Setoff is EIP712 {
     event CreditDrawn(
         uint64 indexed cycle, address indexed borrower, address indexed lender, address token, uint128 amount
     );
+    event FxPreferenceSet(address indexed account, address indexed sell, address indexed buy, uint64 minRate);
+    event Converted(
+        uint64 indexed cycle, address indexed account, address sell, uint128 sellAmount, address buy, uint128 buyAmount
+    );
     event CreditRepaid(address indexed borrower, address indexed lender, address indexed token, uint128 amount);
 
     error UnsupportedToken(address token);
@@ -136,6 +153,10 @@ contract Setoff is EIP712 {
     error InsufficientBalance();
     error OverCredit(address lender, address borrower, uint128 amount, uint128 available);
     error OverRepay();
+    error FxNotAllowed(address account, address sell, address buy);
+    error FxRateTooLow(address account, uint256 rate, uint256 minRate);
+    error FxUnbalanced(address token);
+    error FxExceedsNet(address account);
 
     constructor(address[] memory tokens_) EIP712("Setoff", "1") {
         for (uint256 i; i < tokens_.length; ++i) {
@@ -256,6 +277,18 @@ contract Setoff is EIP712 {
         emit CreditRepaid(msg.sender, lender, token, amount);
     }
 
+    // ---------------------------------------------------------------- conversion
+
+    /// @notice Opt in (or out, with 0) to having your net `sell` position converted into
+    ///         `buy` during cycles, never below `minRate` (buy per sell, 1e6 = 1:1).
+    function setFxPreference(address sell, address buy, uint64 minRate) external {
+        _requireToken(sell);
+        _requireToken(buy);
+        if (sell == buy) revert UnsupportedToken(buy);
+        fxMinRate[msg.sender][sell][buy] = minRate;
+        emit FxPreferenceSet(msg.sender, sell, buy, minRate);
+    }
+
     // -------------------------------------------------------------------- cycles
 
     /// @notice Clear a set of IOUs in one atomic cycle.
@@ -266,13 +299,17 @@ contract Setoff is EIP712 {
     ///                the index lets the contract net without a hashmap; ordering
     ///                proves uniqueness.
     /// @param draws   Credit-line draws that fund shortfalls, applied before netting.
+    /// @param fx      Currency conversions between opted-in parties, applied to nets. Each
+    ///                must meet its account's minimum rate, and per token the total sold
+    ///                must equal the total bought, so conversions create nothing.
     /// @dev Reverts if any net debtor's deposit (plus draws) can't cover its net.
     ///      Choosing what to include is the solver's job; the contract checks it all.
     function settle(
         bytes32[] calldata ids,
         uint128[] calldata amounts,
         address[] calldata parties,
-        Draw[] calldata draws
+        Draw[] calldata draws,
+        Conversion[] calldata fx
     ) external returns (uint64 cycle) {
         uint256 n = ids.length;
         if (n == 0) revert EmptyCycle();
@@ -293,6 +330,7 @@ contract Setoff is EIP712 {
         for (uint256 i; i < n; ++i) {
             _applyIOU(ids[i], amounts[i], cycle, parties, nets, gross);
         }
+        if (fx.length != 0) _convert(cycle, fx, parties, nets);
 
         uint256[] memory netFunded = new uint256[](t);
         for (uint256 p; p < parties.length; ++p) {
@@ -354,6 +392,35 @@ contract Setoff is EIP712 {
 
     // ------------------------------------------------------------------ internal
 
+    function _convert(uint64 cycle, Conversion[] calldata fx, address[] calldata parties, int256[] memory nets)
+        internal
+    {
+        uint256 t = _tokens.length;
+        int256[] memory balance = new int256[](t); // per token: bought − sold, must end at 0
+        for (uint256 i; i < fx.length; ++i) {
+            Conversion calldata c = fx[i];
+            uint256 minRate = fxMinRate[c.account][c.sell][c.buy];
+            if (minRate == 0) revert FxNotAllowed(c.account, c.sell, c.buy);
+            if (c.sellAmount == 0 || c.buyAmount == 0) revert ZeroAmount();
+            uint256 rate = (uint256(c.buyAmount) * 1e6) / c.sellAmount;
+            if (rate < minRate) revert FxRateTooLow(c.account, rate, minRate);
+            uint256 p = _partyIndex(parties, c.account);
+            uint256 ks = _tokenIndex(c.sell);
+            uint256 kb = _tokenIndex(c.buy);
+            nets[p * t + ks] -= int256(uint256(c.sellAmount));
+            nets[p * t + kb] += int256(uint256(c.buyAmount));
+            // Only the leftover difference converts: you can sell what you're owed in one
+            // currency to cover what you owe in the other, never your deposit.
+            if (nets[p * t + ks] < 0 || nets[p * t + kb] > 0) revert FxExceedsNet(c.account);
+            balance[ks] -= int256(uint256(c.sellAmount));
+            balance[kb] += int256(uint256(c.buyAmount));
+            emit Converted(cycle, c.account, c.sell, c.sellAmount, c.buy, c.buyAmount);
+        }
+        for (uint256 k; k < t; ++k) {
+            if (balance[k] != 0) revert FxUnbalanced(_tokens[k]);
+        }
+    }
+
     function _draw(uint64 cycle, Draw calldata d) internal {
         _requireToken(d.token);
         if (d.amount == 0) revert ZeroAmount();
@@ -406,7 +473,8 @@ contract Setoff is EIP712 {
     }
 
     function _tokenIndex(address token) internal view returns (uint256) {
-        for (uint256 i; i < _tokens.length; ++i) {
+        uint256 n = _tokens.length;
+        for (uint256 i; i < n; ++i) {
             if (_tokens[i] == token) return i;
         }
         return type(uint256).max;

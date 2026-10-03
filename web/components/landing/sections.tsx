@@ -211,7 +211,7 @@ export function Product() {
       n: "02",
       title: "Fund only what you actually owe.",
       body: "Setoff adds up everything you owe and everything you're owed, and tells you the one number to deposit. Owe 1,000 and owed 800? Deposit 200.",
-      points: ["One-click deposit", "Partners can extend you credit", "Withdraw any time"],
+      points: ["One-click deposit", "Opt-in USDC ↔ EURC netting", "Partners can extend you credit"],
       preview: <NetPreview />,
     },
     {
@@ -304,6 +304,7 @@ export function Faq() {
     ["Is this a lending platform?", "No. Setoff settles debts that already exist, with no interest. Businesses can optionally give a trusted partner a credit line from their own deposit; that risk stays between the two of them."],
     ["Who holds my money?", "An open contract with no owner and no admin. Only you can withdraw your balance, and it only goes down for bills you approved."],
     ["What does it cost?", "Arc fees are paid in USDC. A cycle of 25 bills costs about two cents in total, shared by the whole network."],
+    ["I'm owed EURC but owe USDC. Do I deposit USDC?", "Not if you opt in. A cycle can swap your leftover with someone who has the opposite, never below the minimum rate you set."],
     ["What if I'm short when a cycle runs?", "The cycle pays as much of your bills as your deposit covers, and the rest waits for the next one. If a partner gave you a credit line, the gap can come from that."],
     ["What if a bill is wrong?", "Dispute it. That freezes the bill until you and the other side propose the same amount still owed — or 0 to cancel it. Nobody else can decide it."],
   ];
@@ -353,7 +354,7 @@ function AgentTranscript() {
         <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
           <span className="font-mono text-[11px] text-muted-foreground">agent · setoff mcp</span>
           <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-primary" aria-hidden /> 14 tools
+            <span className="size-1.5 rounded-full bg-primary" aria-hidden /> 15 tools
           </span>
         </div>
         <ol className="flex flex-col gap-3 p-5" aria-hidden>

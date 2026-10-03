@@ -124,7 +124,7 @@ contract SetoffTest is Test {
         vm.prank(alice);
         setoff.deposit(address(usdc), 2e6);
 
-        uint64 cycle = setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws());
+        uint64 cycle = setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         assertEq(cycle, 1);
         assertEq(setoff.balanceOf(alice, address(usdc)), 0);
         assertEq(setoff.balanceOf(bob, address(usdc)), 1e6); // +10 -9
@@ -150,7 +150,7 @@ contract SetoffTest is Test {
         net[0] = 2e6;
         vm.expectEmit(address(setoff));
         emit Setoff.CycleSettled(1, address(this), 3, gross, net);
-        setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_tokensNetIndependently() public {
@@ -164,7 +164,7 @@ contract SetoffTest is Test {
         setoff.deposit(address(eurc), 5e6);
 
         address[] memory parties = _sorted(alice, bob, carol);
-        setoff.settle(ids, _full(ids), parties, _noDraws());
+        setoff.settle(ids, _full(ids), parties, _noDraws(), new Setoff.Conversion[](0));
         assertEq(setoff.balanceOf(bob, address(usdc)), 5e6);
         assertEq(setoff.balanceOf(alice, address(eurc)), 5e6);
     }
@@ -179,7 +179,7 @@ contract SetoffTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(Setoff.InsufficientDeposit.selector, alice, address(usdc), 10e6, 9e6));
 
-        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         // Nothing changed: IOU still pending, cycle not consumed.
         (, Setoff.Status status,,) = setoff.getIOU(ids[0]);
         assertEq(uint8(status), uint8(Setoff.Status.Pending));
@@ -195,7 +195,7 @@ contract SetoffTest is Test {
         ids[1] = id;
         uint128[] memory amts = _full(ids);
         vm.expectRevert(abi.encodeWithSelector(Setoff.NotPending.selector, id));
-        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_cannotSettleTwice() public {
@@ -203,10 +203,10 @@ contract SetoffTest is Test {
         ids[0] = _post(_iou(alice, bob, address(usdc), 1e6, 1));
         vm.prank(alice);
         setoff.deposit(address(usdc), 2e6);
-        setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         uint128[] memory amts = _full(ids);
         vm.expectRevert(abi.encodeWithSelector(Setoff.NotPending.selector, ids[0]));
-        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_revertsOnUnsortedParties() public {
@@ -216,7 +216,7 @@ contract SetoffTest is Test {
         (p[0], p[1]) = (p[1], p[0]);
         uint128[] memory amts = _full(ids);
         vm.expectRevert(Setoff.PartiesNotSorted.selector);
-        setoff.settle(ids, amts, p, _noDraws());
+        setoff.settle(ids, amts, p, _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_revertsOnMissingParty() public {
@@ -226,7 +226,7 @@ contract SetoffTest is Test {
         p[0] = alice;
         uint128[] memory amts = _full(ids);
         vm.expectRevert(abi.encodeWithSelector(Setoff.PartyMissing.selector, bob));
-        setoff.settle(ids, amts, p, _noDraws());
+        setoff.settle(ids, amts, p, _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_revertsOnExpiredAtSettle() public {
@@ -237,7 +237,7 @@ contract SetoffTest is Test {
         vm.warp(block.timestamp + 1 days + 1);
         uint128[] memory amts = _full(ids);
         vm.expectRevert(abi.encodeWithSelector(Setoff.Expired.selector, ids[0]));
-        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_submitRejectsForgedSignature() public {
@@ -296,7 +296,7 @@ contract SetoffTest is Test {
         ids[0] = a;
         uint128[] memory amts = _full(ids);
         vm.expectRevert(abi.encodeWithSelector(Setoff.NotPending.selector, a));
-        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, amts, _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
     }
 
     function test_depositWithdraw() public {
@@ -315,7 +315,7 @@ contract SetoffTest is Test {
         ids[0] = _post(_iou(alice, bob, address(usdc), 7e6, 1));
         vm.prank(alice);
         setoff.deposit(address(usdc), 7e6);
-        setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         vm.prank(bob);
         setoff.withdraw(address(usdc), 7e6);
         assertEq(usdc.balanceOf(bob), 1_007e6);
@@ -346,7 +346,7 @@ contract SetoffTest is Test {
             setoff.deposit(address(usdc), 600e6);
         }
         uint256 before = _ledgerTotal(address(usdc));
-        setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws());
+        setoff.settle(ids, _full(ids), _sorted(alice, bob, carol), _noDraws(), new Setoff.Conversion[](0));
         assertEq(_ledgerTotal(address(usdc)), before);
         assertEq(usdc.balanceOf(address(setoff)), before);
     }
