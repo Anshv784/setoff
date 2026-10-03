@@ -29,6 +29,8 @@ export function Account({
   onChange,
   noteKeys,
   onUnlock,
+  fx,
+  notes,
 }: {
   /** "wallet": deposits, net hint, name. "bills": add a bill + your IOUs. */
   part: "wallet" | "bills";
@@ -39,7 +41,10 @@ export function Account({
   /** Unlocked private-note keys for this session, if any. */
   noteKeys?: NoteKeys;
   onUnlock?: () => void;
-  /** Extra cards for the wallet page's right column. */
+  /** Wallet page: USDC↔EURC netting card (under the per-currency table). */
+  fx?: React.ReactNode;
+  /** Wallet page: private-notes block inside Profile. */
+  notes?: React.ReactNode;
 }) {
   const [bals, setBals] = useState<Bal>();
   const [billTab, setBillTab] = useState<"open" | "disputed" | "done">("open");
@@ -85,6 +90,7 @@ export function Account({
   if (part === "wallet") {
     return (
       <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="flex flex-col gap-6">
         <section aria-labelledby="bal" className={card}>
           <div className="flex items-baseline justify-between gap-2">
             <h2 id="bal" className="text-base font-medium">
@@ -113,6 +119,14 @@ export function Account({
             onWithdraw={(t, v) => run(`Withdraw ${formatUnits(v, 6)} ${tokenSymbol(t)}`, () => w.withdraw(account, t, v))}
           />
         </section>
+          <section aria-labelledby="name" className={card}>
+            <h2 id="name" className="text-base font-medium">
+              Profile
+            </h2>
+            <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
+            {notes && <div className="border-t border-border pt-5">{notes}</div>}
+          </section>
+        </div>
 
         <div className="flex flex-col gap-6">
           <section aria-labelledby="next" className={card}>
@@ -158,12 +172,7 @@ export function Account({
               onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
             />
           </section>
-          <section aria-labelledby="name" className={card}>
-            <h2 id="name" className="text-base font-medium">
-              Profile
-            </h2>
-            <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
-          </section>
+          {fx && <section className={card}>{fx}</section>}
         </div>
       </div>
     );

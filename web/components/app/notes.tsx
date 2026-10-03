@@ -7,6 +7,7 @@ import type { Snapshot } from "@/lib/data";
 import type { NoteView } from "@/lib/notes-view";
 import { Button } from "@/components/ui/button";
 import { errorText } from "@/components/setoff/tx";
+import { useApp } from "./state";
 
 export type PrivacyStatus = "ready" | "you" | "them";
 
@@ -18,12 +19,14 @@ export function privacyStatus(snapshot: Snapshot, me: string, other?: string): P
 
 /** "Keep this note private", with the reason when it isn't possible yet. */
 export function PrivateToggle({ status, checked, onChange }: { status?: PrivacyStatus; checked: boolean; onChange: (v: boolean) => void }) {
+  const { enableNotes } = useApp();
+  const [busy, setBusy] = useState(false);
   const ready = status === "ready";
   const hint =
     status === "ready"
       ? "Only you and the other party can read it. Amounts and names stay public."
       : status === "you"
-        ? "Turn on private notes on the Settings page to use this."
+        ? "Turn on private notes once to use this: a free signature and a tiny transaction."
         : status === "them"
           ? "The other party hasn't turned on private notes yet, so this note will be public."
           : "Enter who it's with to check if a private note is possible.";
@@ -41,6 +44,30 @@ export function PrivateToggle({ status, checked, onChange }: { status?: PrivacyS
           <Lock className="size-3.5" aria-hidden /> Keep this note private
         </span>
         <span className="text-xs leading-5 text-muted-foreground">{hint}</span>
+        {status === "you" && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-1 self-start"
+            disabled={busy}
+            onClick={async (e) => {
+              e.preventDefault();
+              setBusy(true);
+              const id = toast.loading("Turning on private notes…");
+              try {
+                await enableNotes();
+                toast.success("Private notes on", { id });
+              } catch (err) {
+                toast.error(errorText(err), { id });
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Lock aria-hidden /> Turn on private notes
+          </Button>
+        )}
       </span>
     </label>
   );

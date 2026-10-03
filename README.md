@@ -83,10 +83,9 @@ sequenceDiagram
 |---|---|
 | Overview | Your position and the network's open bills, savings and recent cycles |
 | Bills | Send an invoice or record what you owe; your open, disputed and settled bills; disputes; CSV export |
-| Wallet | Deposits and withdraw; what you owe and are owed per currency; Profile (ERC-8004 name) |
+| Wallet | Deposits and withdraw; what you owe and are owed per currency; USDC↔EURC netting opt-in with a preview; Profile (ERC-8004 name) and private notes |
 | Credit | Grant credit lines; what you lend and can borrow; repay |
 | Network · Activity · Agents | Who owes whom, every cycle and bill, and the MCP setup for AI agents |
-| Settings | Private notes, and the USDC↔EURC netting opt-in with a minimum rate and a preview |
 
 ## Design decisions
 
