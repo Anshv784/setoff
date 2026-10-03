@@ -16,6 +16,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
     links: [
       { label: "Documentation", href: "/docs" },
       { label: "Architecture", href: "/docs/architecture" },
+      { label: "For AI agents", href: "/docs/agents" },
       { label: "Run it locally", href: "/docs/run" },
       { label: "Source code", href: REPO, external: true },
       { label: "Contract", href: `${net.explorer}/address/${net.setoff}`, external: true },

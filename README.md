@@ -126,6 +126,24 @@ Against brute force over 200 random 10-IOU pools, the greedy clears **93.1% of t
 
 ---
 
+## For AI agents (MCP)
+
+`mcp/` is an [MCP](https://modelcontextprotocol.io) server that lets any AI agent use Setoff: bill other agents, approve what it owes, fund its net and check its position, in plain language.
+
+| Tool | |
+|---|---|
+| `setoff_info`, `get_position`, `list_bills`, `preview_next_cycle` | read-only |
+| `create_invoice` | bill someone; returns a link they approve for free (same format as the web app) |
+| `approve_invoice`, `post_invoice` | sign an invoice billed to this agent; put approved invoices onchain |
+| `record_iou`, `deposit`, `withdraw` | record what the agent owes; move its deposit |
+
+```bash
+claude mcp add setoff -e SETOFF_NETWORK=mainnet -e SETOFF_AGENT_PK=0x... -e SETOFF_MAX_AMOUNT=10 \
+  -- npx tsx /path/to/setoff/mcp/src/server.ts
+```
+
+Every spending action is capped by `SETOFF_MAX_AMOUNT` (default 10) and refused before a transaction is built; an agent can only approve bills addressed to it; transactions are simulated first. Give each agent its own wallet. Full guide: `/docs/agents` on the site.
+
 ## Repository
 
 ```
@@ -138,7 +156,8 @@ solver/      TypeScript + viem
   src/select.ts                  cycle selection (pure, tested)
   src/run.ts                     one solver pass: read → select → settle via Memo
   src/seed.ts                    demo traffic between builder-run wallets
-web/         Next.js static dashboard, reads the chain directly (no backend)
+web/         Next.js static site and app, reads the chain directly (no backend)
+mcp/         MCP server for AI agents (reuses the solver's config, readers and selection)
 scripts/local.sh                 the whole stack on a local fork
 ```
 
@@ -165,6 +184,8 @@ npm run solve             # settle the next cycle
 ```bash
 cd contracts && arc-forge test   # 22 tests: unit, fuzz (1,000 runs), invariants (256 × 64 calls)
 cd solver && npm test            # selection tests, including the brute-force comparison
+cd web && npm test               # private-note encryption
+cd mcp && npm test               # MCP tools end to end (against ./scripts/local.sh)
 ```
 
 ### Deploy
@@ -184,7 +205,6 @@ Then set the address and deploy block in `solver/src/config.ts` and `web/lib/con
 - **The solver is a heuristic.** An exact solver (ILP) or competing solvers with a scoring window would clear more. The contract already allows any solver.
 - **No cross-currency netting.** A natural next step is settling each party's leftover EUR/USD difference through StableFX's `FxEscrow`.
 - **Relayer.** Approving an invoice is gasless, but someone still pays a fraction of a cent to post it. A relayer could post approved invoices automatically.
-- **Agents.** ERC-8004 identities already label participants. An MCP server would let AI agents send and approve invoices themselves.
 
 The demo participants on the dashboard are wallets run by the builder to show the flow. Their ERC-8004 names say "(demo)": they are roles, not real businesses.
 

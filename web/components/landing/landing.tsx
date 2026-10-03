@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMotionValueEvent, useScroll } from "motion/react";
 import { BILLS, CITIES, FLOWS, GROSS, heroProgress, NET, smooth } from "./story";
-import { ArcSection, BuiltOn, Faq, Product, WhoFor } from "./sections";
+import { Agents, ArcSection, BuiltOn, Faq, Product, WhoFor } from "./sections";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, ExternalLink } from "lucide-react";
@@ -51,6 +51,7 @@ export function Landing() {
         <BuiltOn />
         <WhoFor />
         <Product />
+        <Agents />
         <LiveNumbers />
         <ArcSection />
         <Faq />

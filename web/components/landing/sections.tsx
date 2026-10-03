@@ -1,6 +1,7 @@
 "use client";
 
-import { BadgeCheck, Check, Wallet } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, BadgeCheck, Check, Wallet } from "lucide-react";
 import { Reveal } from "@/components/site/motion";
 
 /* ---------------------------------------------------------------- built on */
@@ -124,7 +125,7 @@ export function WhoFor() {
     { art: "ring" as const, title: "Supplier networks", body: "Businesses that buy from and sell to each other every month." },
     { art: "pair" as const, title: "Agencies & freelancers", body: "Studios that subcontract each other and settle up constantly." },
     { art: "fx" as const, title: "Cross-border teams", body: "Partners billing in USDC and EURC, paying only the net." },
-    { art: "agents" as const, title: "AI agents", body: "Software that buys services from other software, many times a day." },
+    { art: "agents" as const, title: "AI agents", body: "Software that buys services from other software, many times a day.", href: "#agents" },
   ];
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-24 md:px-6 md:py-28">
@@ -138,6 +139,11 @@ export function WhoFor() {
               </div>
               <h3 className="text-lg font-medium">{it.title}</h3>
               <p className="text-sm leading-6 text-muted-foreground">{it.body}</p>
+              {"href" in it && it.href && (
+                <a href={it.href} className="mt-auto inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  Connect an agent <ArrowRight className="size-3.5" aria-hidden />
+                </a>
+              )}
             </li>
           </Reveal>
         ))}
@@ -388,3 +394,86 @@ export function Faq() {
   );
 }
 
+
+/* ------------------------------------------------------------------ agents */
+
+function AgentTranscript() {
+  const lines: { who: "you" | "agent" | "tool"; text: string }[] = [
+    { who: "you", text: "Bill the search agent 4.50 USDC for yesterday's 900 summaries." },
+    { who: "tool", text: "create_invoice → link ready, nothing onchain yet" },
+    { who: "agent", text: "Done. Here's the invoice link for them to approve." },
+    { who: "you", text: "What do I owe before the next cycle?" },
+    { who: "tool", text: "get_position → owe 12.00 · owed 9.75 · net −2.25" },
+    { who: "agent", text: "You're 2.25 USDC net. Want me to deposit it?" },
+    { who: "you", text: "Yes." },
+    { who: "tool", text: "deposit 2.25 USDC → confirmed" },
+  ];
+  return (
+    <div className="relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-8 rounded-[2rem] bg-[radial-gradient(50%_50%_at_50%_50%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent_70%)]"
+      />
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-black/40">
+        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
+          <span className="font-mono text-[11px] text-muted-foreground">agent · setoff mcp</span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-primary" aria-hidden /> 10 tools
+          </span>
+        </div>
+        <ol className="flex flex-col gap-3 p-5" aria-hidden>
+          {lines.map((l, i) =>
+            l.who === "tool" ? (
+              <li key={i} className="ml-1 border-l-2 border-primary/50 pl-3 font-mono text-xs text-muted-foreground">
+                {l.text}
+              </li>
+            ) : (
+              <li key={i} className={`flex ${l.who === "you" ? "justify-end" : "justify-start"}`}>
+                <span
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${
+                    l.who === "you" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm border border-border bg-card"
+                  }`}
+                >
+                  {l.text}
+                </span>
+              </li>
+            ),
+          )}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+export function Agents() {
+  return (
+    <section id="agents" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-24 md:px-6 md:py-28">
+      <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+        <Reveal className="flex flex-col gap-6">
+          <p className="text-sm font-medium text-primary">For AI agents</p>
+          <h2 className="text-3xl font-semibold tracking-tight text-balance md:text-5xl">Agents can settle up too.</h2>
+          <p className="max-w-md text-lg leading-8 text-muted-foreground">
+            Agents that buy from other agents run up hundreds of tiny bills. Setoff&apos;s MCP server lets any AI agent bill, approve, fund
+            its net and check its position — in plain language, with a spending limit you set.
+          </p>
+          <ul className="flex flex-col gap-2.5">
+            {["Works with Claude, Cursor and any MCP client", "Per-action spending cap on every agent", "Same invoice links as the app"].map((p) => (
+              <li key={p} className="flex items-center gap-2.5 text-sm">
+                <span className="grid size-5 place-items-center rounded-full bg-primary/15 text-primary">
+                  <Check className="size-3" aria-hidden />
+                </span>
+                {p}
+              </li>
+            ))}
+          </ul>
+          <Link href="/docs/agents" className="inline-flex h-11 w-fit items-center gap-2 rounded-lg border border-border px-5 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            Connect an agent <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <AgentTranscript />
+        </Reveal>
+      </div>
+    </section>
+  );
+}

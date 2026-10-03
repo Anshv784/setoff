@@ -1,0 +1,24 @@
+{
+  "name": "setoff-mcp",
+  "private": true,
+  "type": "module",
+  "description": "MCP server that lets AI agents bill, approve and settle through Setoff on Arc",
+  "bin": {
+    "setoff-mcp": "src/server.ts"
+  },
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "test": "tsx --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "viem": "^2.57.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

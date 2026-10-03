@@ -12,6 +12,7 @@ export const DOCS = [
   { href: "/docs/contract", title: "Smart contract", group: "Design" },
   { href: "/docs/solver", title: "Solver", group: "Design" },
   { href: "/docs/arc", title: "Built on Arc", group: "Design" },
+  { href: "/docs/agents", title: "For AI agents", group: "Developers" },
   { href: "/docs/run", title: "Run & deploy", group: "Developers" },
   { href: "/docs/faq", title: "FAQ", group: "Developers" },
 ] as const;

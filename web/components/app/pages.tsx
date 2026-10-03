@@ -10,6 +10,7 @@ import { NetworkView } from "@/components/setoff/network";
 import { PageHeader } from "./shell";
 import { useApp } from "./state";
 import { PrivateNotesCard } from "./notes";
+import { AgentCard } from "./agent-card";
 
 
 export function OverviewPage() {
@@ -39,12 +40,15 @@ export function WalletPage() {
           onChange={reload}
           aside={
             account && (
-              <PrivateNotesCard
-                enabled={!!snapshot.noteKeys[account.toLowerCase()]}
-                unlocked={!!noteKeys}
-                onEnable={enableNotes}
-                onUnlock={unlockNotes}
-              />
+              <>
+                <PrivateNotesCard
+                  enabled={!!snapshot.noteKeys[account.toLowerCase()]}
+                  unlocked={!!noteKeys}
+                  onEnable={enableNotes}
+                  onUnlock={unlockNotes}
+                />
+                <AgentCard />
+              </>
             )
           }
         /> : <Skeleton className="h-96 w-full max-w-2xl" />}
