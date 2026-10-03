@@ -15,9 +15,15 @@ export default function Page() {
       <H2 id="add-a-bill">1. Add a bill</H2>
       <H3>Send an invoice (gasless for the debtor)</H3>
       <P>
-        The creditor fills in who owes, how much, the currency and what it&apos;s for. Setoff builds the IOU and puts it in a link. Nothing
-        touches the chain yet. The debtor opens the link and approves it with an <strong>EIP-712 signature</strong>, which is free and needs
-        no USDC. Anyone holding the approved link, usually the creditor, then posts it to the pool.
+        The creditor fills in who owes, how much, the currency and what it&apos;s for. Setoff builds the IOU and{" "}
+        <strong>sends it to the debtor&apos;s Setoff app</strong>: a Memo transaction (a fraction of a cent) that only the named creditor can
+        send. The debtor sees it under <strong>Waiting for you</strong> on the Bills page, with a badge on Bills and an optional browser
+        notification, and approves it with an <strong>EIP-712 signature</strong>, which is free and needs no USDC. Nothing is owed until then.
+        There&apos;s also a link to share any other way.
+      </P>
+      <P>
+        If both sides have private notes on, the note is encrypted before it&apos;s sent. Declining just hides the invoice for you; nothing
+        changes onchain.
       </P>
       <H3>Record what you owe</H3>
       <P>

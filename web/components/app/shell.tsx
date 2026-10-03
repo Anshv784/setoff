@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Logo, REPO } from "@/components/site/brand";
 import { InvoiceView } from "@/components/setoff/invoice";
 import { AppProvider, useApp } from "./state";
+import { InboxBadge, InboxNotifier } from "./inbox";
 import { ConnectDialog, WalletButton } from "./wallet-ui";
 
 export const APP_LINKS = [
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <AppProvider>
       <AppNav />
       <ConnectDialog />
+      <InboxNotifier />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-10 md:px-6">
         <Suspense>
           <InvoiceGate />
@@ -105,6 +107,7 @@ function AppNav() {
               >
                 <l.icon className="size-3.5" aria-hidden />
                 {l.label}
+                {l.href === "/app/bills" && <InboxBadge />}
               </Link>
             );
           })}
@@ -130,6 +133,7 @@ function NavBar({ pathname }: { pathname: string }) {
           <Link key={l.href} href={l.href} aria-current={active ? "page" : undefined} className={`${pill(active)} px-3`}>
             <l.icon className={`size-4 ${active ? "text-primary" : ""}`} aria-hidden />
             {l.label}
+            {l.href === "/app/bills" && <InboxBadge />}
           </Link>
         );
       })}

@@ -202,8 +202,8 @@ export function Product() {
   const steps = [
     {
       n: "01",
-      title: "Bill anyone with a link.",
-      body: "Fill in who owes you, how much and what for. Setoff turns it into a link. The other side approves it with one free signature — no gas, no account.",
+      title: "Bill anyone. It lands in their app.",
+      body: "Fill in who owes you, how much and what for. It shows up in their Setoff app, or send the link. They approve it with one free signature — no gas, no account.",
       points: ["USDC or EURC", "Invoice note stored onchain", "Either side can cancel"],
       preview: <InvoicePreview />,
     },
@@ -337,7 +337,7 @@ function AgentTranscript() {
   const lines: { who: "you" | "agent" | "tool"; text: string }[] = [
     { who: "you", text: "Bill the search agent 4.50 USDC for yesterday's 900 summaries." },
     { who: "tool", text: "create_invoice → link ready, nothing onchain yet" },
-    { who: "agent", text: "Done. Here's the invoice link for them to approve." },
+    { who: "agent", text: "Done. It's waiting in their Setoff app for a free approval." },
     { who: "you", text: "What do I owe before the next cycle?" },
     { who: "tool", text: "get_position → owe 12.00 · owed 9.75 · net −2.25" },
     { who: "agent", text: "You're 2.25 USDC net. Want me to deposit it?" },
@@ -354,7 +354,7 @@ function AgentTranscript() {
         <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
           <span className="font-mono text-[11px] text-muted-foreground">agent · setoff mcp</span>
           <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-primary" aria-hidden /> 15 tools
+            <span className="size-1.5 rounded-full bg-primary" aria-hidden /> 16 tools
           </span>
         </div>
         <ol className="flex flex-col gap-3 p-5" aria-hidden>

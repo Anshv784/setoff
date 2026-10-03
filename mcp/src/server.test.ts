@@ -36,6 +36,7 @@ test("exposes the tools", async () => {
     "dispute_bill",
     "get_position",
     "list_bills",
+    "list_invoice_requests",
     "post_invoice",
     "preview_next_cycle",
     "propose_amount",
@@ -57,10 +58,17 @@ test("agent A bills agent B; B approves and posts it; it shows up as open", asyn
   const inv = await a.call("create_invoice", { debtor: B_ADDR, amount: "2.25", token: "USDC", note: "MCP test: 1,000 API calls" });
   assert.ok(!inv.error, inv.error ?? "");
   assert.match(inv.data.link, /\/app\/bills\?invoice=/);
+  assert.ok(inv.data.sentToTheirApp.hash, "invoice was sent to the debtor's app");
+
+  const waiting = await b.call("list_invoice_requests");
+  assert.ok(waiting.data.some((x: { invoice: string }) => x.invoice === inv.data.invoice), "B sees it waiting");
 
   const approved = await b.call("approve_invoice", { invoice: inv.data.link, post: true });
   assert.ok(!approved.error, approved.error ?? "");
   assert.ok(approved.data.posted.hash);
+
+  const after = await b.call("list_invoice_requests");
+  assert.ok(!after.data.some((x: { invoice: string }) => x.invoice === inv.data.invoice), "gone once added");
 
   const bills = await b.call("list_bills", { address: B_ADDR, status: "pending" });
   assert.ok(bills.data.some((x: { note?: string; amount: string }) => x.note === "MCP test: 1,000 API calls" && x.amount === "2.25"));

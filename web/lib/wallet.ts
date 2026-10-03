@@ -18,7 +18,7 @@ import { setoffAbi } from "./setoffAbi";
 import { MEMO, net } from "./config";
 import { client, NOTE_KEY_ID } from "./data";
 import { bytesToHex, KEY_MESSAGE, keysFromSignature } from "./private-notes";
-import { iouDomain, iouTypes, type Invoice, type IOU } from "./invoice";
+import { encodeInvoice, INVOICE_REQUEST_ID, iouDomain, iouTypes, type Invoice, type IOU } from "./invoice";
 import { identityAbi, registrationURI } from "./identity";
 
 export const MULTICALL3_FROM: Address = "0x522fAf9A91c41c443c66765030741e4AaCe147D0";
@@ -286,4 +286,13 @@ export async function referenceRate(): Promise<number | null> {
   } catch {
     return null;
   }
+}
+
+/** Send an invoice to the debtor through Arc's Memo contract, so it shows up in their app. */
+export async function sendInvoiceRequest(account: Address, inv: Invoice) {
+  const data = encodeFunctionData({ abi: setoffAbi, functionName: "tokens" });
+  const w = await wallet(account);
+  return confirm(
+    await w.writeContract({ address: MEMO, abi: memoAbi, functionName: "memo", args: [net.setoff, data, INVOICE_REQUEST_ID, toHex(encodeInvoice(inv))] }),
+  );
 }

@@ -40,7 +40,7 @@ flowchart LR
 ```
 
 1. **Add a bill**, in one of two ways:
-   - **Send an invoice.** The creditor drafts a bill and gets a link. The debtor opens it and approves with a free EIP-712 signature (no gas, no USDC needed). Then anyone, usually the creditor, posts the approved invoice.
+   - **Send an invoice.** The creditor drafts a bill; it's sent to the debtor's Setoff app through Memo (only the named creditor can send it), and there's a link too. The debtor sees it under "Waiting for you" (badge on Bills, optional browser notification) and approves with a free EIP-712 signature (no gas, no USDC needed). Then anyone, usually the creditor, posts the approved invoice.
    - **Record what you owe.** The debtor posts the IOU directly.
 
    Both paths go through Arc's Memo contract, so the invoice note is stored onchain with the IOU. IOUs live onchain in a public pool. Each one has a currency, an amount, a deadline and a `ref` for the invoice ID.
@@ -116,7 +116,7 @@ Every feature below is used in the deployed flow and checked on-chain.
 | Arc feature | Where Setoff uses it |
 |---|---|
 | **USDC as gas** | Participants hold one asset for fees and settlement. The demo funds wallets with a single native transfer, because native USDC *is* the ERC-20 balance. |
-| **Memo** (`0x5294…e505`) | Debtors post IOUs through `Memo.memo` with the invoice text, and the solver posts every `settle` through it with the cycle summary. The dashboard rebuilds invoice notes and cycle memos from `Memo` events. |
+| **Memo** (`0x5294…e505`) | Creditors send invoices to the debtor's app as memos (`setoff:invoice:v1`), debtors post IOUs through `Memo.memo` with the invoice text, and the solver posts every `settle` through it with the cycle summary. The dashboard rebuilds invoice notes and cycle memos from `Memo` events. |
 | **Multicall3From** (`0x522f…47D0`) | `approve` + `deposit` in one transaction, with the participant preserved as sender. |
 | **Deterministic sub-second finality** | A settled cycle is final straight away, so cycles can run every few minutes and participants can withdraw at once. |
 | **EURC** | Second settlement currency, netted on its own. |
@@ -155,7 +155,8 @@ Against brute force over 200 random 10-IOU pools, the greedy clears **93.1% of t
 | Tool | |
 |---|---|
 | `setoff_info`, `get_position`, `list_bills`, `preview_next_cycle` | read-only |
-| `create_invoice` | bill someone; returns a link they approve for free (same format as the web app) |
+| `create_invoice` | bill someone; sends it to their Setoff app (or link only) for a free approval |
+| `list_invoice_requests` | invoices sent to this agent that are waiting for approval |
 | `approve_invoice`, `post_invoice` | sign an invoice billed to this agent; put approved invoices onchain |
 | `record_iou`, `deposit`, `withdraw` | record what the agent owes; move its deposit |
 | `dispute_bill`, `propose_amount` | freeze a bill and resolve it by matching offers |

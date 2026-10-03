@@ -3,6 +3,7 @@ import { setoffAbi } from "./setoffAbi";
 import { memoAbi } from "./memoAbi";
 import { identities, MEMO, net } from "./config";
 import { loadIdentities } from "./identity";
+import { decodeInvoice, INVOICE_REQUEST_ID, iouId, type Invoice } from "./invoice";
 
 export const client = createPublicClient({ chain: net.chain, transport: http(net.rpc, { retryCount: 3 }) });
 
@@ -45,11 +46,16 @@ export type CycleRow = {
 
 export type FxRow = { account: Address; sell: Address; sellAmount: bigint; buy: Address; buyAmount: bigint };
 
+/** An invoice the creditor posted to Arc for the debtor to review. */
+export type InvoiceRequest = { id: Hex; param: string; invoice: Invoice; tx: Hex; block: bigint };
+
 export type CreditLineRow = { lender: Address; borrower: Address; token: Address; limit: bigint; used: bigint };
 
 export type Snapshot = {
   tokens: Address[];
   creditLines: CreditLineRow[];
+  /** Invoices sent through Arc that the debtor hasn't added yet (not yet onchain as IOUs, not expired). */
+  invoiceRequests: InvoiceRequest[];
   /** FX opt-ins: minimum rate (1e6 = 1:1) by `${account}:${sell}:${buy}`, lower-case. */
   fxPrefs: Record<string, bigint>;
   /** Published private-note public keys, by lower-case address (hex, 32 bytes). */
@@ -126,8 +132,19 @@ export async function loadSnapshot(): Promise<Snapshot> {
 
   const memos = new Map<string, string>();
   const noteKeys: Record<string, Hex> = {};
+  const requests = new Map<Hex, InvoiceRequest>();
   for (const m of memoLogs) {
     if (!m.args.memoId || !m.args.memo) continue;
+    // Invoices sent to a debtor. Only the creditor named in the invoice can send it.
+    if (m.args.memoId === INVOICE_REQUEST_ID) {
+      try {
+        const param = hexToString(m.args.memo);
+        const invoice = decodeInvoice(param);
+        if (m.args.sender?.toLowerCase() === invoice.iou.creditor.toLowerCase())
+          requests.set(iouId(invoice.iou), { id: iouId(invoice.iou), param, invoice, tx: m.transactionHash!, block: m.blockNumber! });
+      } catch {}
+      continue;
+    }
     // Private-note keys are raw 32-byte public keys, published once per wallet (latest wins).
     if (m.args.memoId === NOTE_KEY_ID) {
       if (m.args.sender && m.args.memo.length === 66) noteKeys[m.args.sender.toLowerCase()] = m.args.memo;
@@ -246,7 +263,8 @@ export async function loadSnapshot(): Promise<Snapshot> {
     for (const [k, v] of found) identities.set(k, v);
   } catch {}
 
-  return { tokens: [...tokens], creditLines: [...lines.values()], fxPrefs, noteKeys, ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
+  const invoiceRequests = [...requests.values()].filter((r) => !ious.has(r.id) && r.invoice.iou.deadline > block.timestamp).reverse();
+  return { tokens: [...tokens], creditLines: [...lines.values()], invoiceRequests, fxPrefs, noteKeys, ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
 }
 
 /** What is still owed on a bill. */

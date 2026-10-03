@@ -29,7 +29,7 @@ export default function Page() {
       <H2 id="what-it-does">What Setoff does</H2>
       <List>
         <li>
-          <strong>Bills go onchain.</strong> A creditor sends an invoice link; the debtor approves it with a free signature. Or a debtor records
+          <strong>Bills go onchain.</strong> A creditor sends an invoice, which shows up in the debtor&apos;s app; the debtor approves it with a free signature. Or a debtor records
           what it owes directly. Each bill carries an amount in USDC or EURC, a deadline and an invoice note.
         </li>
         <li>

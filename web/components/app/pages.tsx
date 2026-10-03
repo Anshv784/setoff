@@ -10,6 +10,7 @@ import { PageHeader } from "./shell";
 import { useApp } from "./state";
 import { NetworkView } from "@/components/setoff/network";
 import { FxCard } from "./fx";
+import { WaitingForYou } from "./inbox";
 import { AgentsPanel } from "./agent-card";
 import { CreditPanel } from "./credit";
 
@@ -23,6 +24,7 @@ export function BillsPage() {
   return (
     <>
       <PageHeader title="Bills" description="Send an invoice, record what you owe, and track every bill you're part of." />
+      <WaitingForYou />
       {snapshot ? <Account part="bills" snapshot={snapshot} account={account} onConnect={connect} onChange={reload} noteKeys={noteKeys} onUnlock={() => void unlockNotes()} /> : <Skeleton className="h-96 w-full" />}
     </>
   );

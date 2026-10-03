@@ -11,6 +11,7 @@ import {
   getAbiItem,
   hexToString,
   http,
+  hashTypedData,
   keccak256,
   parseUnits,
   toHex,
@@ -284,13 +285,62 @@ async function newIOU(debtor: Address, creditor: Address, token: Token, amount: 
 }
 
 /** The agent bills `debtor`. Nothing goes onchain; the debtor approves the link. */
-export async function createInvoice(agent: Agent, input: { debtor: Address; amount: string; token: Token; note: string; days?: number }) {
+/** Memo id the web app uses for invoices sent to a debtor's Setoff app. */
+export const INVOICE_REQUEST_ID = keccak256(toHex("setoff:invoice:v1"));
+
+export async function createInvoice(agent: Agent, input: { debtor: Address; amount: string; token: Token; note: string; days?: number; notify?: boolean }) {
   const amount = parseUnits(input.amount, 6);
   checkCap(agent, amount);
   if (input.debtor.toLowerCase() === agent.address.toLowerCase()) throw new Error("An agent can't bill itself.");
   const iou = await newIOU(input.debtor, agent.address, input.token, amount, input.days ?? 7);
   const param = encodeInvoice(iou, input.note);
-  return { link: invoiceLink(param), invoice: param, debtor: input.debtor, amount: input.amount, token: input.token };
+  const out: Record<string, unknown> = { link: invoiceLink(param), invoice: param, debtor: input.debtor, amount: input.amount, token: input.token };
+  // Post it through Memo so it shows up in the debtor's "Waiting for you" (a fraction of a cent).
+  if (input.notify !== false) {
+    const data = encodeFunctionData({ abi: setoffAbi, functionName: "tokens" });
+    out.sentToTheirApp = await send(agent, { address: MEMO, abi: memoAbi, functionName: "memo", args: [net.setoff, data, INVOICE_REQUEST_ID, toHex(param)] });
+  }
+  return out;
+}
+
+/** Invoices sent to `address` through Arc that it hasn't added or that haven't expired. */
+export async function listInvoiceRequests(address: Address) {
+  const head = await client.getBlockNumber({ cacheTime: 0 });
+  const { timestamp } = await client.getBlock();
+  const memoEvent = getAbiItem({ abi: memoAbi, name: "Memo" });
+  const found = new Map<Hex, { param: string; iou: IOU; note: string }>();
+  for (let from = net.deployBlock; from <= head; from += 10_000n) {
+    const to = from + 9_999n > head ? head : from + 9_999n;
+    const memos = await client.getLogs({ address: MEMO, event: memoEvent, args: { target: net.setoff, memoId: INVOICE_REQUEST_ID }, fromBlock: from, toBlock: to });
+    for (const m of memos) {
+      try {
+        const param = hexToString(m.args.memo!);
+        const { iou, note } = decodeInvoice(param);
+        // Only the creditor named in the invoice can send it.
+        if (m.args.sender?.toLowerCase() !== iou.creditor.toLowerCase() || iou.debtor.toLowerCase() !== address.toLowerCase()) continue;
+        if (iou.deadline <= timestamp) continue;
+        found.set(hashTypedData({ domain: domain(), types: iouTypes, primaryType: "IOU", message: iou }), { param, iou, note });
+      } catch {}
+    }
+  }
+  const ids = [...found.keys()];
+  const records = ids.length
+    ? await client.multicall({ contracts: ids.map((id) => ({ address: net.setoff, abi: setoffAbi, functionName: "getIOU", args: [id] }) as const), allowFailure: false })
+    : [];
+  return ids
+    .filter((_, i) => records[i]![1] === 0) // not added to Setoff yet
+    .map((id) => {
+      const { param, iou, note } = found.get(id)!;
+      return {
+        invoice: param,
+        from: iou.creditor,
+        amount: fmt(iou.amount),
+        token: tokenSymbol(iou.token),
+        note: note.startsWith("setoff-enc:v1:") ? "[private note]" : note,
+        due: new Date(Number(iou.deadline) * 1000).toISOString().slice(0, 10),
+      };
+    })
+    .reverse();
 }
 
 /** The agent approves an invoice it owes (free signature); optionally posts it itself. */

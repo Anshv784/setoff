@@ -9,7 +9,8 @@ const NETWORK = process.env.NEXT_PUBLIC_SETOFF_NETWORK ?? "testnet";
 const TOOLS: [string, string][] = [
   ["get_position", "What it owes, is owed, and should deposit"],
   ["list_bills · preview_next_cycle", "Bills and what the next cycle would move"],
-  ["create_invoice · approve_invoice · post_invoice", "Bill others; approve bills it owes"],
+  ["create_invoice · list_invoice_requests", "Bill others (lands in their app); see invoices sent to it"],
+  ["approve_invoice · post_invoice", "Approve bills it owes; put them onchain"],
   ["record_iou", "Record what it owes"],
   ["deposit · withdraw", "Fund its net; take money back"],
   ["dispute_bill · propose_amount", "Freeze a bill; settle it by agreement"],

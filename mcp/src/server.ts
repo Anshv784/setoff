@@ -100,13 +100,30 @@ export function createServer(agent = s.agentFromEnv()) {
     {
       title: "Bill someone",
       description:
-        "Create an invoice from this agent to a debtor. Returns a link to send them; nothing goes onchain until they approve it (free) and it's posted.",
-      inputSchema: { debtor: address, amount, token, note: z.string().min(1).max(120).describe("What it's for, e.g. \"API calls, 2–9 Oct\""), days: z.number().int().min(1).max(30).default(7) },
-      annotations: { readOnlyHint: true, openWorldHint: false },
+        "Create an invoice from this agent to a debtor. By default it's also sent to the debtor's Setoff app through Arc (a fraction of a cent), where it waits for their free approval. Also returns a link to share.",
+      inputSchema: {
+        debtor: address,
+        amount,
+        token,
+        note: z.string().min(1).max(120).describe("What it's for, e.g. \"API calls, 2–9 Oct\""),
+        days: z.number().int().min(1).max(30).default(7),
+        notify: z.boolean().default(true).describe("Send it to the debtor's Setoff app (an onchain memo). false = link only, no transaction."),
+      },
     },
-    guard((i: { debtor: string; amount: string; token: s.Token; note: string; days: number }) =>
+    guard((i: { debtor: string; amount: string; token: s.Token; note: string; days: number; notify: boolean }) =>
       s.createInvoice(needAgent(), { ...i, debtor: i.debtor as Address }),
     ),
+  );
+
+  server.registerTool(
+    "list_invoice_requests",
+    {
+      title: "Invoices waiting for approval",
+      description: "Invoices other parties sent to this agent (or an address) through Arc that haven't been added to Setoff yet. Approve one with approve_invoice using its invoice value.",
+      inputSchema: { address: address.optional() },
+      annotations: { readOnlyHint: true },
+    },
+    guard(async ({ address: a }: { address?: string }) => s.listInvoiceRequests((a as Address) ?? needAgent().address)),
   );
 
   server.registerTool(

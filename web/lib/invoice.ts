@@ -1,4 +1,4 @@
-import { keccak256, parseUnits, toHex, type Address, type Hex } from "viem";
+import { hashTypedData, keccak256, parseUnits, toHex, type Address, type Hex } from "viem";
 import { net } from "./config";
 
 /** The IOU struct exactly as `Setoff.IOU` / its EIP-712 type. */
@@ -28,6 +28,12 @@ export const iouTypes = {
 } as const;
 
 export const iouDomain = () => ({ name: "Setoff", version: "1", chainId: net.chain.id, verifyingContract: net.setoff });
+
+/** The IOU's onchain id (Setoff.hashIOU), computed locally. */
+export const iouId = (iou: IOU) => hashTypedData({ domain: iouDomain(), types: iouTypes, primaryType: "IOU", message: iou });
+
+/** Memo id for invoices posted to Arc so the debtor's app can show them. */
+export const INVOICE_REQUEST_ID = keccak256(toHex("setoff:invoice:v1"));
 
 export function newIOU(input: {
   debtor: Address;
