@@ -29,7 +29,6 @@ export function Account({
   onChange,
   noteKeys,
   onUnlock,
-  settings,
 }: {
   /** "wallet": deposits, net hint, name. "bills": add a bill + your IOUs. */
   part: "wallet" | "bills";
@@ -41,8 +40,6 @@ export function Account({
   noteKeys?: NoteKeys;
   onUnlock?: () => void;
   /** Extra cards for the wallet page's right column. */
-  /** Settings cards shown in their own row below balances. */
-  settings?: React.ReactNode[];
 }) {
   const [bals, setBals] = useState<Bal>();
   const [billTab, setBillTab] = useState<"open" | "disputed" | "done">("open");
@@ -87,7 +84,6 @@ export function Account({
 
   if (part === "wallet") {
     return (
-      <div className="flex flex-col gap-10">
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section aria-labelledby="bal" className={card}>
           <div className="flex items-baseline justify-between gap-2">
@@ -169,20 +165,6 @@ export function Account({
             <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
           </section>
         </div>
-      </div>
-
-      {settings && (
-        <div className="flex flex-col gap-4">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Settings</h2>
-          <div className="grid items-start gap-6 lg:grid-cols-2">
-            {settings.map((node, i) => (
-              <div key={i} className={card}>
-                {node}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       </div>
     );
   }

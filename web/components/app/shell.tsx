@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, Bot, Code2, HandCoins, History, LayoutGrid, Receipt, Wallet, Waypoints } from "lucide-react";
+import { BookOpen, Bot, Code2, HandCoins, History, LayoutGrid, Receipt, Settings, Wallet, Waypoints } from "lucide-react";
 import { net } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { Logo, REPO } from "@/components/site/brand";
@@ -19,6 +19,7 @@ export const APP_LINKS = [
   { href: "/app/network", label: "Network", icon: Waypoints, group: "tools" },
   { href: "/app/activity", label: "Activity", icon: History, group: "tools" },
   { href: "/app/agents", label: "Agents", icon: Bot, group: "tools" },
+  { href: "/app/settings", label: "Settings", icon: Settings, group: "tools" },
 ] as const;
 
 const isActive = (pathname: string, href: string) => (href === "/app" ? pathname === "/app" || pathname === "/app/" : pathname.startsWith(href));
@@ -114,7 +115,7 @@ function AppNav() {
   );
 }
 
-/** Main pages as labelled pills; Network, Activity and Agents as a compact icon group. */
+/** Main pages as labelled pills; Network, Activity, Agents and Settings as a compact icon group. */
 function NavBar({ pathname }: { pathname: string }) {
   const main = APP_LINKS.filter((l) => l.group === "main");
   const tools = APP_LINKS.filter((l) => l.group === "tools");

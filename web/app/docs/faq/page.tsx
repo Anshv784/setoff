@@ -9,7 +9,7 @@ const QA: [string, string, React.ReactNode][] = [
     "Is this a lending platform?",
     "No. Setoff settles debts that already exist, using as little cash as possible, and nobody earns interest. Businesses can optionally grant a trusted partner a credit line, but that's a private promise between those two: draws come only from the lender's own deposit, and the risk stays with them.",
   ],
-  ["fx", "I'm owed EURC but owe USDC. Do I have to deposit USDC?", "Not if you opt in. Set a minimum rate under Settings on the Wallet page, and a cycle can swap your EURC leftover with someone who has the opposite, at a reference rate at or above your minimum. If nobody matches or the rate misses your minimum, you fund your USDC as usual."],
+  ["fx", "I'm owed EURC but owe USDC. Do I have to deposit USDC?", "Not if you opt in. Set a minimum rate on the Settings page, and a cycle can swap your EURC leftover with someone who has the opposite, at a reference rate at or above your minimum. If nobody matches or the rate misses your minimum, you fund your USDC as usual."],
   ["audit", "Has the contract been audited?", "Not by a firm. It has had a self-review: Slither with no high or medium findings, unit, fuzz and invariant tests, and a manual checklist. The details and accepted risks are in AUDIT.md in the repo."],
   ["short", "What if I'm short when a cycle runs?", "The cycle pays as much of your bills as your deposit allows, and the rest stays open for the next cycle. If a partner has given you a credit line, the gap can be drawn from it instead."],
   ["dispute", "Can I dispute a bill?", "Yes. Either side can dispute an open bill, which freezes it. Then both of you propose what's still owed; when the amounts match it reopens at that amount (or is cancelled at 0). No one else can decide it for you."],
@@ -43,7 +43,7 @@ const QA: [string, string, React.ReactNode][] = [
   [
     "privacy",
     "Is my data private?",
-    "Partly. Invoice notes can be private: turn on private notes under Settings on the Wallet page and they're encrypted so only you and the other party can read them. Amounts, names and addresses are always public, because the contract needs them to settle. Full confidential amounts are possible once Arc's Privacy Sector launches.",
+    "Partly. Invoice notes can be private: turn on private notes on the Settings page and they're encrypted so only you and the other party can read them. Amounts, names and addresses are always public, because the contract needs them to settle. Full confidential amounts are possible once Arc's Privacy Sector launches.",
   ],
   ["demo", "Who are the businesses marked \"(demo)\"?", "Example wallets that keep the network active so you can see how it works. They are roles, not real companies. Your own bills settle alongside them."],
 ];
