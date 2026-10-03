@@ -106,7 +106,7 @@ export default function Page() {
 
       <H2 id="private-notes">Private notes</H2>
       <P>
-        Invoice notes can be encrypted so only the debtor and creditor can read them. Each wallet turns this on once on the Wallet page: a free
+        Invoice notes can be encrypted so only the debtor and creditor can read them. Each wallet turns this on once from Profile in the account menu (top right), or right in the invoice form: a free
         signature creates its key, and a tiny transaction publishes the public half through Memo. When both parties have it on, &quot;Keep this
         note private&quot; is ticked by default.
       </P>

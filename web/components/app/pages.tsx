@@ -9,7 +9,6 @@ import { Account } from "@/components/setoff/account";
 import { PageHeader } from "./shell";
 import { useApp } from "./state";
 import { NetworkView } from "@/components/setoff/network";
-import { PrivateNotesCard } from "./notes";
 import { FxCard } from "./fx";
 import { AgentsPanel } from "./agent-card";
 import { CreditPanel } from "./credit";
@@ -30,10 +29,10 @@ export function BillsPage() {
 }
 
 export function WalletPage() {
-  const { snapshot, account, connect, reload, noteKeys, unlockNotes, enableNotes } = useApp();
+  const { snapshot, account, connect, reload } = useApp();
   return (
     <>
-      <PageHeader title="Wallet" description="Your deposits, what you owe and are owed per currency, USDC ↔ EURC netting, and your profile." />
+      <PageHeader title="Wallet" description="Your deposits, what you owe and are owed per currency, and USDC ↔ EURC netting." />
       {snapshot ? <Account
           part="wallet"
           snapshot={snapshot}
@@ -41,11 +40,6 @@ export function WalletPage() {
           onConnect={connect}
           onChange={reload}
           fx={account && <FxCard snapshot={snapshot} account={account} onChange={reload} />}
-          notes={
-            account && (
-              <PrivateNotesCard embedded enabled={!!snapshot.noteKeys[account.toLowerCase()]} unlocked={!!noteKeys} onEnable={enableNotes} onUnlock={unlockNotes} />
-            )
-          }
         /> : <Skeleton className="h-96 w-full" />}
     </>
   );

@@ -30,7 +30,6 @@ export function Account({
   noteKeys,
   onUnlock,
   fx,
-  notes,
 }: {
   /** "wallet": deposits, net hint, name. "bills": add a bill + your IOUs. */
   part: "wallet" | "bills";
@@ -43,8 +42,6 @@ export function Account({
   onUnlock?: () => void;
   /** Wallet page: USDC↔EURC netting card (under the per-currency table). */
   fx?: React.ReactNode;
-  /** Wallet page: private-notes block inside Profile. */
-  notes?: React.ReactNode;
 }) {
   const [bals, setBals] = useState<Bal>();
   const [billTab, setBillTab] = useState<"open" | "disputed" | "done">("open");
@@ -89,18 +86,18 @@ export function Account({
 
   if (part === "wallet") {
     return (
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
-        <section aria-labelledby="bal" className={card}>
+        <section aria-labelledby="bal" className={`${card} flex-1`}>
           <div className="flex items-baseline justify-between gap-2">
             <h2 id="bal" className="text-base font-medium">
               Your deposits
             </h2>
             <span className="font-mono text-xs text-muted-foreground">{shortAddr(account)}</span>
           </div>
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
+          <ul className="flex flex-1 flex-col divide-y divide-border rounded-lg border border-border">
             {(bals ?? snapshot.tokens.map((token) => ({ token, deposit: undefined, wallet: undefined }))).map((b) => (
-              <li key={b.token} className="flex items-center justify-between gap-4 p-4">
+              <li key={b.token} className="flex flex-1 items-center justify-between gap-4 p-4">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground">{tokenSymbol(b.token)} in Setoff</span>
                   <span className="font-mono text-xl tabular-nums">{b.deposit === undefined ? "…" : fmtToken(b.deposit, b.token)}</span>
@@ -119,13 +116,6 @@ export function Account({
             onWithdraw={(t, v) => run(`Withdraw ${formatUnits(v, 6)} ${tokenSymbol(t)}`, () => w.withdraw(account, t, v))}
           />
         </section>
-          <section aria-labelledby="name" className={card}>
-            <h2 id="name" className="text-base font-medium">
-              Profile
-            </h2>
-            <NameRow account={account} busy={!!busy} onRegister={(name) => run("Register name", () => w.registerName(account, name))} />
-            {notes && <div className="border-t border-border pt-5">{notes}</div>}
-          </section>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -172,7 +162,7 @@ export function Account({
               onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
             />
           </section>
-          {fx && <section className={card}>{fx}</section>}
+          {fx && <section className={`${card} flex-1`}>{fx}</section>}
         </div>
       </div>
     );
@@ -621,7 +611,7 @@ function NetHint({
   );
 }
 
-function NameRow({ account, busy, onRegister }: { account: Address; busy: boolean; onRegister: (name: string) => void }) {
+export function NameRow({ account, busy, onRegister }: { account: Address; busy: boolean; onRegister: (name: string) => void }) {
   const [name, setName] = useState("");
   const id = identities.get(account.toLowerCase());
   if (id) {

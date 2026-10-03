@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangle, Check, ChevronDown, Copy, ExternalLink, Loader2, LogOut, Wallet } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Copy, ExternalLink, Loader2, LogOut, UserRound, Wallet } from "lucide-react";
 import { labelOf, net } from "@/lib/config";
 import { shortAddr } from "@/lib/format";
 import type { WalletOption } from "@/lib/wallets";
@@ -16,7 +16,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { errorText } from "@/components/setoff/tx";
+import { errorText, useTx } from "@/components/setoff/tx";
+import { NameRow } from "@/components/setoff/account";
+import * as w from "@/lib/wallet";
+import { PrivateNotesCard } from "./notes";
 import { useApp } from "./state";
 
 const INSTALL = [
@@ -67,10 +70,13 @@ export function WalletButton() {
 function AccountMenu() {
   const { account, wallet, disconnect } = useApp();
   const router = useRouter();
+  const [profile, setProfile] = useState(false);
   if (!account) return null;
   const name = labelOf(account)?.name;
 
   return (
+    <>
+    <ProfileDialog open={profile} onOpenChange={setProfile} />
     <DropdownMenu>
       <DropdownMenuTrigger
         className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-2 pr-2.5 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -104,8 +110,11 @@ function AccountMenu() {
             <ExternalLink aria-hidden /> View on explorer
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem className="h-9" onClick={() => setProfile(true)}>
+          <UserRound aria-hidden /> Profile and private notes
+        </DropdownMenuItem>
         <DropdownMenuItem className="h-9" onClick={() => router.push("/app/wallet")}>
-          <Wallet aria-hidden /> Deposits and name
+          <Wallet aria-hidden /> Deposits
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -120,6 +129,30 @@ function AccountMenu() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
+  );
+}
+
+/** Your name (ERC-8004) and private notes, from the account menu. */
+function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const { account, snapshot, reload, noteKeys, unlockNotes, enableNotes } = useApp();
+  const { busy, run } = useTx(reload);
+  if (!account) return null;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Profile</DialogTitle>
+          <DialogDescription>How others see you, and who can read your invoice notes.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-5">
+          <NameRow account={account} busy={!!busy} onRegister={(n) => run("Register name", () => w.registerName(account, n))} />
+          <div className="border-t border-border pt-5">
+            <PrivateNotesCard embedded enabled={!!snapshot?.noteKeys[account.toLowerCase()]} unlocked={!!noteKeys} onEnable={enableNotes} onUnlock={unlockNotes} />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

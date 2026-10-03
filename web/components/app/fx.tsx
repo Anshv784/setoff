@@ -67,8 +67,7 @@ export function FxCard({ snapshot, account, onChange }: { snapshot: Snapshot; ac
         </span>
       </div>
       <p className="text-sm leading-6 text-muted-foreground">
-        Optional. If you&apos;re owed one currency and owe the other, a cycle can swap the difference with another opted-in party instead of
-        you depositing it. Never below your minimum rate, and never from your deposit.
+        Owed one currency but owe the other? Opt in and a cycle swaps the difference with another opted-in party, never below your minimum.
       </p>
       <p className="rounded-lg border border-border bg-background p-3 text-xs leading-5 text-muted-foreground">{preview}</p>
       <div className="grid grid-cols-2 gap-3">
