@@ -9,7 +9,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { memoAbi } from "./memoAbi.ts";
 import { setoffAbi } from "./setoffAbi.ts";
 import { MEMO, network, USDC } from "./config.ts";
-import { loadBalances, loadPool, publicClient } from "./chain.ts";
+import { loadBalances, loadCreditLines, loadPool, publicClient } from "./chain.ts";
 import { selectCycle } from "./select.ts";
 
 const net = network();
@@ -26,9 +26,10 @@ const pool = await loadPool(client, net);
 console.log(`pool: ${pool.length} pending IOUs`);
 if (pool.length === 0) process.exit(0);
 
-const balances = await loadBalances(client, net, pool);
+const lines = await loadCreditLines(client, net);
+const balances = await loadBalances(client, net, pool, lines.map((l) => l.lender));
 const { timestamp } = await client.getBlock();
-const cycle = selectCycle(pool, balances, timestamp);
+const cycle = selectCycle(pool, balances, timestamp, undefined, lines);
 if (!cycle) {
   console.log("no fundable cycle: every net debtor is short");
   process.exit(0);
@@ -38,10 +39,18 @@ const next = (await client.readContract({ address: net.setoff, abi: setoffAbi, f
 const summary = [...cycle.gross.entries()]
   .map(([t, g]) => `${fmt(t, g)} cleared with ${fmt(t, cycle.netFunded.get(t) ?? 0n)}`)
   .join("; ");
-const memoText = `Setoff cycle ${next}: ${cycle.ids.length} IOUs, ${summary}`;
+const extras = [
+  cycle.partial ? `${cycle.partial} paid in part` : "",
+  cycle.draws.length ? `${cycle.draws.length} credit draw${cycle.draws.length > 1 ? "s" : ""}` : "",
+].filter(Boolean);
+const memoText = `Setoff cycle ${next}: ${cycle.ids.length} IOUs, ${summary}${extras.length ? ` (${extras.join(", ")})` : ""}`;
 console.log(memoText);
 
-const settleData = encodeFunctionData({ abi: setoffAbi, functionName: "settle", args: [cycle.ids, cycle.parties] });
+const settleData = encodeFunctionData({
+  abi: setoffAbi,
+  functionName: "settle",
+  args: [cycle.ids, cycle.amounts, cycle.parties, cycle.draws],
+});
 const memoArgs = [net.setoff, settleData, keccak256(toHex(`setoff:cycle:${next}`)), toHex(memoText)] as const;
 
 // Simulate first: a deposit withdrawn after we read balances would revert onchain.

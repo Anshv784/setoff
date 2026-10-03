@@ -50,97 +50,31 @@ function Heading({ eyebrow, title, lead, center }: { eyebrow: string; title: str
 
 /* ---------------------------------------------------------------- who for */
 
-/* Tiny line drawings, one per audience. Strokes use theme tokens; blue marks the money. */
-const ink = "var(--muted-foreground)";
-const blue = "var(--primary)";
-
-function Dot({ x, y, r = 5, accent }: { x: number; y: number; r?: number; accent?: boolean }) {
-  return <circle cx={x} cy={y} r={r} fill="var(--card)" stroke={accent ? blue : ink} strokeWidth={1.5} />;
-}
-
-function Art({ kind }: { kind: "ring" | "pair" | "fx" | "agents" }) {
-  return (
-    <svg viewBox="0 0 160 72" className="h-16 w-auto" aria-hidden>
-      <defs>
-        <marker id={`m-${kind}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-          <path d="M0,1 L9,5 L0,9 z" fill={ink} />
-        </marker>
-        <marker id={`mb-${kind}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-          <path d="M0,1 L9,5 L0,9 z" fill={blue} />
-        </marker>
-      </defs>
-      {kind === "ring" && (
-        <g fill="none" strokeWidth={1.3}>
-          <path d="M44 16 Q80 2 116 16" stroke={ink} markerEnd={`url(#m-${kind})`} />
-          <path d="M122 24 Q138 44 116 58" stroke={ink} markerEnd={`url(#m-${kind})`} />
-          <path d="M108 62 Q80 72 52 62" stroke={blue} strokeWidth={1.8} markerEnd={`url(#mb-${kind})`} />
-          <path d="M40 56 Q22 40 38 22" stroke={ink} markerEnd={`url(#m-${kind})`} />
-          <Dot x={40} y={18} />
-          <Dot x={120} y={18} />
-          <Dot x={120} y={60} />
-          <Dot x={40} y={60} accent />
-        </g>
-      )}
-      {kind === "pair" && (
-        <g fill="none" strokeWidth={1.3}>
-          <path d="M40 30 Q80 14 118 30" stroke={ink} markerEnd={`url(#m-${kind})`} />
-          <path d="M118 44 Q80 60 42 44" stroke={ink} markerEnd={`url(#m-${kind})`} />
-          <text x="80" y="17" textAnchor="middle" fontSize="10" fill={ink} className="font-mono">10</text>
-          <text x="80" y="66" textAnchor="middle" fontSize="10" fill={ink} className="font-mono">8</text>
-          <Dot x={32} y={37} r={7} accent />
-          <Dot x={128} y={37} r={7} />
-          <text x="80" y="41" textAnchor="middle" fontSize="11" fill={blue} className="font-mono">net 2</text>
-        </g>
-      )}
-      {kind === "fx" && (
-        <g fill="none" strokeWidth={1.3}>
-          <rect x="8" y="22" width="52" height="28" rx="14" stroke={ink} />
-          <text x="34" y="40" textAnchor="middle" fontSize="11" fill="var(--foreground)" className="font-mono">USDC</text>
-          <rect x="100" y="22" width="52" height="28" rx="14" stroke={ink} />
-          <text x="126" y="40" textAnchor="middle" fontSize="11" fill="var(--foreground)" className="font-mono">EURC</text>
-          <path d="M64 30 H96" stroke={ink} markerEnd={`url(#m-${kind})`} />
-          <path d="M96 42 H64" stroke={blue} strokeWidth={1.8} markerEnd={`url(#mb-${kind})`} />
-        </g>
-      )}
-      {kind === "agents" && (
-        <g fill="none" strokeWidth={1.3}>
-          <rect x="10" y="24" width="24" height="24" rx="6" stroke={ink} />
-          <rect x="68" y="24" width="24" height="24" rx="6" stroke={ink} />
-          <rect x="126" y="24" width="24" height="24" rx="6" stroke={blue} />
-          {[0, 1, 2, 3, 4].map((i) => (
-            <circle key={`a${i}`} cx={42 + i * 5} cy={36} r={1.4} fill={ink} />
-          ))}
-          {[0, 1, 2, 3, 4].map((i) => (
-            <circle key={`b${i}`} cx={100 + i * 5} cy={36} r={1.4} fill={i === 4 ? blue : ink} />
-          ))}
-          <path d="M16 36 h12 M74 36 h12 M132 36 h12" stroke={ink} strokeDasharray="2 3" />
-        </g>
-      )}
-    </svg>
-  );
-}
-
 export function WhoFor() {
   const items = [
-    { art: "ring" as const, title: "Supplier networks", body: "Businesses that buy from and sell to each other every month." },
-    { art: "pair" as const, title: "Agencies & freelancers", body: "Studios that subcontract each other and settle up constantly." },
-    { art: "fx" as const, title: "Cross-border teams", body: "Partners billing in USDC and EURC, paying only the net." },
-    { art: "agents" as const, title: "AI agents", body: "Software that buys services from other software, many times a day.", href: "#agents" },
+    { fact: "12 → 1", caption: "invoices a month, one settlement", title: "Supplier networks", body: "Businesses that buy from and sell to each other every month." },
+    { fact: "10 − 8 = 2", caption: "owe 10, owed 8, pay 2", title: "Agencies & freelancers", body: "Studios that subcontract each other and settle up constantly." },
+    { fact: "$ · €", caption: "USDC and EURC, each netted", title: "Cross-border teams", body: "Partners billing in both currencies, paying only the net." },
+    { fact: "900 → 1", caption: "calls a day, one settlement", title: "AI agents", body: "Software that buys services from other software, all day long.", href: "#agents" },
   ];
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-24 md:px-6 md:py-28">
       <Heading eyebrow="Who it's for" title="Anyone who owes and is owed by the same people." />
-      <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it, i) => (
-          <Reveal key={it.title} delay={i * 0.06}>
-            <li className="group flex h-full flex-col gap-5 rounded-2xl border border-border bg-card p-6 transition-colors hover:border-primary/40">
-              <div className="flex h-20 items-center rounded-xl border border-border/60 bg-background/60 px-3">
-                <Art kind={it.art} />
+          <Reveal key={it.title} delay={i * 0.06} className="bg-card">
+            <li className="group flex h-full flex-col gap-4 p-7 transition-colors hover:bg-muted/40">
+              <div className="flex flex-col gap-1 border-b border-border pb-5">
+                <span className="text-3xl font-semibold tracking-tight text-primary tabular-nums">{it.fact}</span>
+                <span className="text-xs text-muted-foreground">{it.caption}</span>
               </div>
               <h3 className="text-lg font-medium">{it.title}</h3>
               <p className="text-sm leading-6 text-muted-foreground">{it.body}</p>
-              {"href" in it && it.href && (
-                <a href={it.href} className="mt-auto inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {it.href && (
+                <a
+                  href={it.href}
+                  className="mt-auto inline-flex items-center gap-1 rounded-sm text-sm text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   Connect an agent <ArrowRight className="size-3.5" aria-hidden />
                 </a>
               )}

@@ -19,6 +19,9 @@ const iou = (debtor: Address, creditor: Address, amount: bigint, token = USDC): 
   amount,
   deadline: NOW + 86_400n,
 });
+/** Ids the selection pays in full (partial pieces excluded). */
+const fullIds = (s: { ids: Hex[]; amounts: bigint[] }, pool: PendingIOU[]) =>
+  new Set(s.ids.filter((id, i) => s.amounts[i] === pool.find((p) => p.id === id)!.amount));
 const bal = (entries: [Address, bigint, Address?][]): Balances =>
   new Map(entries.map(([a, v, t]) => [balanceKey(a, t ?? USDC), v]));
 
@@ -49,8 +52,9 @@ test("scores drops globally, keeping offsetting IOUs", () => {
   const ba = iou(B, A, 4n);
   const pool = [ab, ba, iou(B, C, 6n), iou(C, A, 1n)];
   const s = selectCycle(pool, bal([[A, 3n], [B, 2n]]), NOW);
-  assert.deepEqual(new Set(s?.ids), new Set([ab.id, ba.id]));
-  assert.equal(s?.gross.get(USDC), 11n);
+  assert.ok(s);
+  // Whole bills: A<->B. The partial pass may then add part of another bill on top.
+  assert.deepEqual(fullIds(s, pool), new Set([ab.id, ba.id]));
 });
 
 test("currencies never offset each other", () => {
@@ -86,10 +90,12 @@ test("random pools always yield feasible selections", () => {
     const s = selectCycle(pool, balances, NOW);
     if (!s) continue;
     const nets = new Map<string, bigint>();
-    for (const p of pool.filter((x) => s.ids.includes(x.id))) {
-      nets.set(balanceKey(p.debtor, p.token), (nets.get(balanceKey(p.debtor, p.token)) ?? 0n) - p.amount);
-      nets.set(balanceKey(p.creditor, p.token), (nets.get(balanceKey(p.creditor, p.token)) ?? 0n) + p.amount);
-    }
+    s.ids.forEach((id, i) => {
+      const p = pool.find((x) => x.id === id)!;
+      const amt = s.amounts[i]!;
+      nets.set(balanceKey(p.debtor, p.token), (nets.get(balanceKey(p.debtor, p.token)) ?? 0n) - amt);
+      nets.set(balanceKey(p.creditor, p.token), (nets.get(balanceKey(p.creditor, p.token)) ?? 0n) + amt);
+    });
     for (const [k, net] of nets) assert.ok(net >= 0n || -net <= (balances.get(k) ?? 0n), `round ${round}: ${k}`);
     const sum = [...nets.values()].reduce((x, y) => x + y, 0n);
     assert.equal(sum, 0n);
@@ -128,7 +134,10 @@ test("greedy is close to brute-force optimal on small pools", () => {
       const g = subset.reduce((x, p) => x + p.amount, 0n);
       if (g > best) best = g;
     }
-    const got = selectCycle(pool, balances, NOW)?.gross.get(USDC) ?? 0n;
+    // Benchmark whole-bill selection (what brute force searches); partial pieces come on top.
+    const sel = selectCycle(pool, balances, NOW);
+    const full = sel ? fullIds(sel, pool) : new Set<Hex>();
+    const got = pool.filter((p) => full.has(p.id)).reduce((x, p) => x + p.amount, 0n);
     assert.ok(got <= best);
     greedyTotal += got;
     optimalTotal += best;
@@ -137,4 +146,70 @@ test("greedy is close to brute-force optimal on small pools", () => {
   const ratio = Number((greedyTotal * 10_000n) / optimalTotal) / 100;
   console.log(`greedy clears ${ratio}% of optimal value; exact optimum in ${exact}/${rounds} pools`);
   assert.ok(ratio >= 90);
+});
+
+test("partial pass pays what a short debtor can cover", () => {
+  // A owes B 10 but has deposited 4: whole bill can't settle, 4 of it can.
+  const bill = iou(A, B, 10n);
+  const s = selectCycle([bill], bal([[A, 4n]]), NOW);
+  assert.ok(s);
+  assert.deepEqual(s.ids, [bill.id]);
+  assert.deepEqual(s.amounts, [4n]);
+  assert.equal(s.partial, 1);
+  assert.equal(s.netFunded.get(USDC), 4n);
+});
+
+test("credit pass funds a shortfall from a lender with room", () => {
+  // A owes B 10, has 6; C lends A up to 5 and has 20 deposited.
+  const bill = iou(A, B, 10n);
+  const lines = [{ lender: C, borrower: A, token: USDC, available: 5n }];
+  const s = selectCycle([bill], bal([[A, 6n], [C, 20n]]), NOW, undefined, lines);
+  assert.ok(s);
+  assert.deepEqual(s.amounts, [10n]);
+  assert.deepEqual(s.draws, [{ borrower: A, lender: C, token: USDC, amount: 4n }]);
+  assert.equal(s.partial, 0);
+});
+
+test("credit never exceeds the line or the lender's free deposit", () => {
+  const bill = iou(A, B, 10n);
+  // Line has room for 5 but lender only has 2 free: credit can't cover the 4 gap, so pay 6+0 partially.
+  const lines = [{ lender: C, borrower: A, token: USDC, available: 5n }];
+  const s = selectCycle([bill], bal([[A, 6n], [C, 2n]]), NOW, undefined, lines);
+  assert.ok(s);
+  assert.equal(s.draws.length, 0);
+  assert.deepEqual(s.amounts, [6n]);
+});
+
+test("every selection with partials and credit stays fundable", () => {
+  const people = [A, B, C, "0x00000000000000000000000000000000000000dd" as Address];
+  let seed = 3;
+  const rnd = (m: number) => ((seed = (seed * 1103515245 + 12345) % 2 ** 31), seed % m);
+  for (let round = 0; round < 300; round++) {
+    const pool: PendingIOU[] = [];
+    for (let i = 0; i < 10; i++) {
+      const d = rnd(4);
+      pool.push(iou(people[d]!, people[(d + 1 + rnd(3)) % 4]!, BigInt(1 + rnd(40))));
+    }
+    const balances = bal(people.map((p) => [p, BigInt(rnd(30))] as [Address, bigint]));
+    const lines = people.flatMap((l, i) => (rnd(3) === 0 ? [{ lender: l, borrower: people[(i + 1) % 4]!, token: USDC, available: BigInt(rnd(20)) }] : []));
+    const s = selectCycle(pool, balances, NOW, undefined, lines);
+    if (!s) continue;
+    // Replay exactly what the contract does: draws first, then nets, then debit checks.
+    const ledger = new Map(balances);
+    for (const d of s.draws) {
+      const lk = balanceKey(d.lender, d.token);
+      const bk = balanceKey(d.borrower, d.token);
+      assert.ok((ledger.get(lk) ?? 0n) >= d.amount, `round ${round}: lender overdrawn`);
+      ledger.set(lk, (ledger.get(lk) ?? 0n) - d.amount);
+      ledger.set(bk, (ledger.get(bk) ?? 0n) + d.amount);
+    }
+    const nets = new Map<string, bigint>();
+    s.ids.forEach((id, i) => {
+      const p = pool.find((x) => x.id === id)!;
+      assert.ok(s.amounts[i]! > 0n && s.amounts[i]! <= p.amount, `round ${round}: bad pay amount`);
+      nets.set(balanceKey(p.debtor, p.token), (nets.get(balanceKey(p.debtor, p.token)) ?? 0n) - s.amounts[i]!);
+      nets.set(balanceKey(p.creditor, p.token), (nets.get(balanceKey(p.creditor, p.token)) ?? 0n) + s.amounts[i]!);
+    });
+    for (const [k, net] of nets) assert.ok(net >= 0n || -net <= (ledger.get(k) ?? 0n), `round ${round}: ${k} underfunded`);
+  }
 });
