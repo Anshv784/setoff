@@ -66,10 +66,14 @@ export function FxCard({ snapshot, account, onChange }: { snapshot: Snapshot; ac
           {on.EURC && on.USDC ? "Both ways" : on.EURC ? "Sell EURC" : on.USDC ? "Sell USDC" : "Off"}
         </span>
       </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="flex flex-col gap-3">
       <p className="text-sm leading-6 text-muted-foreground">
         Owed one currency but owe the other? Opt in and a cycle swaps the difference with another opted-in party, never below your minimum.
       </p>
       <p className="rounded-lg border border-border bg-background p-3 text-xs leading-5 text-muted-foreground">{preview}</p>
+      </div>
+      <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
           <Label htmlFor="fx-sell">I&apos;ll give up</Label>
@@ -108,6 +112,8 @@ export function FxCard({ snapshot, account, onChange }: { snapshot: Snapshot; ac
             Opt out
           </Button>
         )}
+      </div>
+      </div>
       </div>
     </section>
   );

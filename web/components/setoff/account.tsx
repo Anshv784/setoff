@@ -86,39 +86,38 @@ export function Account({
 
   if (part === "wallet") {
     return (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-6">
-        <section aria-labelledby="bal" className={`${card} flex-1`}>
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 id="bal" className="text-base font-medium">
-              Your deposits
-            </h2>
-            <span className="font-mono text-xs text-muted-foreground">{shortAddr(account)}</span>
-          </div>
-          <ul className="flex flex-1 flex-col divide-y divide-border rounded-lg border border-border">
-            {(bals ?? snapshot.tokens.map((token) => ({ token, deposit: undefined, wallet: undefined }))).map((b) => (
-              <li key={b.token} className="flex flex-1 items-center justify-between gap-4 p-4">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs text-muted-foreground">{tokenSymbol(b.token)} in Setoff</span>
-                  <span className="font-mono text-xl tabular-nums">{b.deposit === undefined ? "…" : fmtToken(b.deposit, b.token)}</span>
-                  <span className="text-xs text-muted-foreground">in wallet {b.wallet === undefined ? "…" : fmtToken(b.wallet, b.token)}</span>
-                </div>
-                {/* eslint-disable-next-line @next/next/no-img-element -- static token mark */}
-                <img src={`/logos/${tokenSymbol(b.token).toLowerCase()}.svg`} alt="" className="size-8 opacity-80" />
-              </li>
-            ))}
-          </ul>
-          <MoveForm
-            tokens={snapshot.tokens}
-            bals={bals}
-            busy={!!busy}
-            onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
-            onWithdraw={(t, v) => run(`Withdraw ${formatUnits(v, 6)} ${tokenSymbol(t)}`, () => w.withdraw(account, t, v))}
-          />
+      <div className="flex flex-col gap-6">
+        <section aria-label="Your deposits" className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2">
+          {(bals ?? snapshot.tokens.map((token) => ({ token, deposit: undefined, wallet: undefined }))).map((b) => (
+            <div key={b.token} className="flex items-center justify-between gap-4 bg-card p-5">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">{tokenSymbol(b.token)} in Setoff</span>
+                <span className="font-mono text-2xl tabular-nums">{b.deposit === undefined ? "…" : fmtToken(b.deposit, b.token)}</span>
+                <span className="text-xs text-muted-foreground">in wallet {b.wallet === undefined ? "…" : fmtToken(b.wallet, b.token)}</span>
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element -- static token mark */}
+              <img src={`/logos/${tokenSymbol(b.token).toLowerCase()}.svg`} alt="" className="size-9 opacity-80" />
+            </div>
+          ))}
         </section>
-        </div>
 
-        <div className="flex flex-col gap-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section aria-labelledby="move" className={card}>
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 id="move" className="text-base font-medium">
+                Deposit or withdraw
+              </h2>
+              <span className="font-mono text-xs text-muted-foreground">{shortAddr(account)}</span>
+            </div>
+            <MoveForm
+              tokens={snapshot.tokens}
+              bals={bals}
+              busy={!!busy}
+              onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
+              onWithdraw={(t, v) => run(`Withdraw ${formatUnits(v, 6)} ${tokenSymbol(t)}`, () => w.withdraw(account, t, v))}
+            />
+          </section>
+
           <section aria-labelledby="next" className={card}>
             <h2 id="next" className="text-base font-medium">
               For the next cycle
@@ -162,8 +161,9 @@ export function Account({
               onDeposit={(t, a) => run(`Deposit ${a} ${tokenSymbol(t)}`, () => w.deposit(account, t, a))}
             />
           </section>
-          {fx && <section className={`${card} flex-1`}>{fx}</section>}
         </div>
+
+        {fx && <section className={card}>{fx}</section>}
       </div>
     );
   }
