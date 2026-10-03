@@ -1,4 +1,4 @@
-import { createPublicClient, getAbiItem, hexToString, http, keccak256, toHex, type Address, type Hex, type Log } from "viem";
+import { createPublicClient, getAbiItem, hexToString, http, parseEventLogs, keccak256, toHex, type Address, type Hex, type Log } from "viem";
 import { setoffAbi } from "./setoffAbi";
 import { memoAbi } from "./memoAbi";
 import { identities, MEMO, net } from "./config";
@@ -107,7 +107,8 @@ export async function loadSnapshot(): Promise<Snapshot> {
   );
   const [logs, memoLogs] = await Promise.all([
     logsInWindows(
-      (fromBlock, toBlock) => client.getLogs({ address: net.setoff, events: setoffEvents, fromBlock, toBlock, strict: true }),
+      // No topic filter: Arc's RPC rejects more than ~10 topics ("requested range too large").
+      async (fromBlock, toBlock) => parseEventLogs({ abi: setoffEvents, logs: await client.getLogs({ address: net.setoff, fromBlock, toBlock }), strict: true }),
       head,
     ),
     logsInWindows(
