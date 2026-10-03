@@ -17,8 +17,9 @@ export const APP_LINKS = [
   { href: "/app/bills", label: "Bills" },
   { href: "/app/wallet", label: "Wallet" },
   { href: "/app/credit", label: "Credit" },
-  { href: "/app/agents", label: "Agents" },
+  { href: "/app/network", label: "Network" },
   { href: "/app/activity", label: "Activity" },
+  { href: "/app/agents", label: "Agents" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -51,22 +52,29 @@ function AppNav() {
     <header
       className={`sticky top-0 z-40 w-full border-b transition-colors ${scrolled ? "border-border bg-background/80 backdrop-blur-xl" : "border-border bg-background"}`}
     >
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 md:px-6">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-5 px-4 md:px-6">
         <Logo />
         <nav aria-label="App" className="hidden h-full md:block">
           <NavLinks pathname={pathname} />
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <Link href="/docs" className="hidden h-9 items-center rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring gap-1.5 lg:inline-flex">
-            <BookOpen className="size-4" aria-hidden /> Docs
+          <Link
+            href="/docs"
+            aria-label="Docs"
+            title="Docs"
+            className="hidden size-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:grid"
+          >
+            <BookOpen className="size-4" aria-hidden />
           </Link>
           <a
             href={REPO}
             target="_blank"
             rel="noreferrer"
-            className="hidden h-9 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex"
+            aria-label="Source code"
+            title="Source code"
+            className="hidden size-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:grid"
           >
-            <Code2 className="size-4" aria-hidden /> Code
+            <Code2 className="size-4" aria-hidden />
           </a>
           <Badge variant="outline" className="hidden sm:inline-flex">
             {net.name}

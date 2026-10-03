@@ -119,7 +119,7 @@ export function Overview() {
             <Link href="/app/activity?tab=open" className={buttonVariants({ variant: "outline", size: "sm" })}>
               Open bills
             </Link>
-            <Link href="/app/activity?tab=network" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            <Link href="/app/network" className={buttonVariants({ variant: "ghost", size: "sm" })}>
               See the network <ArrowRight aria-hidden />
             </Link>
           </div>

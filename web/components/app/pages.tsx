@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Account } from "@/components/setoff/account";
 import { PageHeader } from "./shell";
 import { useApp } from "./state";
+import { NetworkView } from "@/components/setoff/network";
 import { PrivateNotesCard } from "./notes";
 import { AgentsPanel } from "./agent-card";
 import { CreditPanel } from "./credit";
@@ -78,6 +79,16 @@ export function AgentsPage() {
     <>
       <PageHeader title="Agents" description="Give an AI agent its own wallet and Setoff tools, within limits you set." />
       <AgentsPanel />
+    </>
+  );
+}
+
+export function NetworkPage() {
+  const { snapshot, account } = useApp();
+  return (
+    <>
+      <PageHeader title="Who owes whom" description="Every bill as its own payment, versus only the net through Setoff." />
+      {snapshot ? <NetworkView snapshot={snapshot} account={account} /> : <Skeleton className="h-[34rem] w-full" />}
     </>
   );
 }
