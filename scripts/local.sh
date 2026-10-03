@@ -26,10 +26,25 @@ if ! "$CAST" chain-id --rpc-url "$RPC" >/dev/null 2>&1; then
 fi
 
 FUNDER_PK="$("$CAST" wallet private-key --mnemonic "$ANVIL_MNEMONIC" --mnemonic-index 9)"
-MNEMONIC="$("$CAST" wallet new-mnemonic --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["mnemonic"])')"
-TESTER_JSON="$("$CAST" wallet new --json)"
-TESTER_ADDR="$(echo "$TESTER_JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)[0]["address"])')"
-TESTER_PK="$(echo "$TESTER_JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)[0]["private_key"])')"
+# Keep the same demo and test wallets across runs, so wallets already imported into
+# MetaMask keep working; generate them only the first time.
+if [ -f "$ROOT/.local.env" ]; then
+  # shellcheck disable=SC1091
+  PREV_MNEMONIC="$(grep '^DEMO_MNEMONIC=' "$ROOT/.local.env" | cut -d'"' -f2)"
+  PREV_TESTER_ADDR="$(grep '^TESTER_ADDR=' "$ROOT/.local.env" | cut -d= -f2)"
+  PREV_TESTER_PK="$(grep '^TESTER_PK=' "$ROOT/.local.env" | cut -d= -f2)"
+  PREV_TESTER2_ADDR="$(grep '^TESTER2_ADDR=' "$ROOT/.local.env" | cut -d= -f2)"
+  PREV_TESTER2_PK="$(grep '^TESTER2_PK=' "$ROOT/.local.env" | cut -d= -f2)"
+fi
+MNEMONIC="${PREV_MNEMONIC:-$("$CAST" wallet new-mnemonic --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["mnemonic"])')}"
+if [ -n "${PREV_TESTER_PK:-}" ]; then
+  TESTER_ADDR="$PREV_TESTER_ADDR"
+  TESTER_PK="$PREV_TESTER_PK"
+else
+  TESTER_JSON="$("$CAST" wallet new --json)"
+  TESTER_ADDR="$(echo "$TESTER_JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)[0]["address"])')"
+  TESTER_PK="$(echo "$TESTER_JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)[0]["private_key"])')"
+fi
 
 echo "Deploying Setoff"
 cd "$ROOT/contracts"
@@ -73,6 +88,8 @@ SOLVER_PK=$FUNDER_PK
 DEMO_MNEMONIC="$MNEMONIC"
 TESTER_ADDR=$TESTER_ADDR
 TESTER_PK=$TESTER_PK
+${PREV_TESTER2_PK:+TESTER2_ADDR=$PREV_TESTER2_ADDR}
+${PREV_TESTER2_PK:+TESTER2_PK=$PREV_TESTER2_PK}
 ENV
 
 cat >"$ROOT/web/.env.local" <<ENV

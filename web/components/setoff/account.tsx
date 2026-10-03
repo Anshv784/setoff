@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { formatUnits, isAddress, parseUnits, type Address } from "viem";
 import { BadgeCheck, Wallet } from "lucide-react";
 import { identities, net, tokenSymbol } from "@/lib/config";
-import type { IOURow, Snapshot } from "@/lib/data";
+import { remainingOf, type IOURow, type Snapshot } from "@/lib/data";
 import { fmtDate, fmtToken, shortAddr } from "@/lib/format";
 import * as w from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
@@ -138,7 +138,7 @@ export function Account({
   }
 
   const open = myIous.filter((i) => i.status === "pending");
-  const sum = (rows: IOURow[]) => rows.reduce((s, i) => s + i.amount, 0n);
+  const sum = (rows: IOURow[]) => rows.reduce((s, i) => s + remainingOf(i), 0n);
   const youOwe = open.filter((i) => i.debtor.toLowerCase() === account.toLowerCase() && i.token === snapshot.tokens[0]);
   const owedYou = open.filter((i) => i.creditor.toLowerCase() === account.toLowerCase() && i.token === snapshot.tokens[0]);
   const usdc = snapshot.tokens[0]!;
@@ -211,28 +211,46 @@ export function Account({
             {myIous.map((i) => {
               const owe = i.debtor.toLowerCase() === account.toLowerCase();
               return (
-                <li key={i.id} className="flex items-center justify-between gap-3 p-3">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">{owe ? "You owe" : "Owes you"}</span>
-                    <Party address={owe ? i.creditor : i.debtor} />
-                    {i.note && (
-                      <span className="truncate text-xs text-muted-foreground">
-                        <NoteText view={readNote(i, account, noteKeys)} canUnlock={!!snapshot.noteKeys[account.toLowerCase()]} onUnlock={onUnlock} />
-                      </span>
+                <li key={i.id} className="flex flex-col gap-3 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">{owe ? "You owe" : "Owes you"}</span>
+                      <Party address={owe ? i.creditor : i.debtor} />
+                      {i.note && (
+                        <span className="truncate text-xs text-muted-foreground">
+                          <NoteText view={readNote(i, account, noteKeys)} canUnlock={!!snapshot.noteKeys[account.toLowerCase()]} onUnlock={onUnlock} />
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="font-mono text-sm tabular-nums">{fmtToken(i.amount, i.token)}</span>
+                      <span className={`text-xs ${i.status === "disputed" ? "text-amber-300" : "text-muted-foreground"}`}>{billStatus(i)}</span>
+                    </div>
+                    {i.status === "pending" ? (
+                      <div className="flex shrink-0 flex-col items-end">
+                        <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => run(owe ? "Cancel bill" : "Reject bill", () => w.cancel(account, i.id))}>
+                          {owe ? "Cancel" : "Reject"}
+                        </Button>
+                        <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => run("Dispute bill", () => w.disputeBill(account, i.id))}>
+                          Dispute
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="w-[4.5rem]" aria-hidden />
                     )}
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="font-mono text-sm tabular-nums">{fmtToken(i.amount, i.token)}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {i.status === "settled" ? `Settled · #${String(i.cycle)}` : i.status === "pending" ? "Open" : i.status === "cancelled" ? "Cancelled" : "Expired"}
-                    </span>
-                  </div>
-                  {i.status === "pending" ? (
-                    <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => run(owe ? "Cancel IOU" : "Reject IOU", () => w.cancel(account, i.id))}>
-                      {owe ? "Cancel" : "Reject"}
-                    </Button>
-                  ) : (
-                    <span className="w-[4.5rem]" aria-hidden />
+                  {i.status === "pending" && i.paid > 0n && (
+                    <div className="h-1 overflow-hidden rounded-full bg-muted" role="img" aria-label={`${fmtToken(i.paid, i.token)} of ${fmtToken(i.amount, i.token)} paid`}>
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${Number((i.paid * 100n) / i.amount)}%` }} />
+                    </div>
+                  )}
+                  {i.status === "disputed" && (
+                    <DisputePanel
+                      iou={i}
+                      owe={owe}
+                      busy={!!busy}
+                      onOffer={(v) => run("Propose amount", () => w.offerAmount(account, i.id, v))}
+                    />
                   )}
                 </li>
               );
@@ -240,6 +258,64 @@ export function Account({
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function billStatus(i: IOURow) {
+  if (i.status === "settled") return i.cycle ? `Settled · #${String(i.cycle)}` : "Settled";
+  if (i.status === "disputed") return "Disputed";
+  if (i.status === "pending") return i.paid > 0n ? `Part paid · ${fmtToken(i.paid, i.token)}` : "Open";
+  return i.status === "cancelled" ? "Cancelled" : "Expired";
+}
+
+/** Both sides propose what's still owed; matching proposals reopen the bill (0 cancels it). */
+function DisputePanel({ iou, owe, busy, onOffer }: { iou: IOURow; owe: boolean; busy: boolean; onOffer: (remaining: bigint) => void }) {
+  const [amount, setAmount] = useState("");
+  const open = iou.amount - iou.paid;
+  const mine = owe ? iou.offers?.debtor : iou.offers?.creditor;
+  const theirs = owe ? iou.offers?.creditor : iou.offers?.debtor;
+  const value = isAmount(amount) || amount === "0" ? parseUnits(amount, 6) : undefined;
+  const tooMuch = value !== undefined && value > open;
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+      <p className="text-xs leading-5 text-muted-foreground">
+        Frozen: no cycle can pay this until you both propose the same amount still owed ({fmtToken(open, iou.token)} open). Propose 0 to cancel it.
+      </p>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <span className="text-muted-foreground">
+          You proposed: <span className="font-mono text-foreground">{mine === undefined ? "—" : fmtToken(mine, iou.token)}</span>
+        </span>
+        <span className="text-muted-foreground">
+          They proposed: <span className="font-mono text-foreground">{theirs === undefined ? "—" : fmtToken(theirs, iou.token)}</span>
+        </span>
+      </div>
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (value !== undefined && !tooMuch) onOffer(value);
+        }}
+      >
+        <Input
+          aria-label="Amount still owed"
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="Still owed, e.g. 8.00"
+          value={amount}
+          aria-invalid={tooMuch}
+          onChange={(e) => setAmount(e.target.value)}
+          className="h-8 font-mono text-sm"
+        />
+        <Button type="submit" size="sm" variant="outline" disabled={value === undefined || tooMuch || busy}>
+          Propose
+        </Button>
+        {theirs !== undefined && (
+          <Button type="button" size="sm" disabled={busy} onClick={() => onOffer(theirs)}>
+            Accept {fmtToken(theirs, iou.token)}
+          </Button>
+        )}
+      </form>
     </div>
   );
 }
@@ -435,8 +511,8 @@ function NetHint({
   const rows = snapshot.tokens
     .map((token) => {
       const open = snapshot.ious.filter((i) => i.status === "pending" && i.token.toLowerCase() === token.toLowerCase());
-      const owe = open.filter((i) => i.debtor.toLowerCase() === me).reduce((s, i) => s + i.amount, 0n);
-      const owed = open.filter((i) => i.creditor.toLowerCase() === me).reduce((s, i) => s + i.amount, 0n);
+      const owe = open.filter((i) => i.debtor.toLowerCase() === me).reduce((s, i) => s + remainingOf(i), 0n);
+      const owed = open.filter((i) => i.creditor.toLowerCase() === me).reduce((s, i) => s + remainingOf(i), 0n);
       const deposit = bals?.find((b) => b.token === token)?.deposit;
       const net = owed - owe;
       const needed = deposit === undefined || net >= 0n ? 0n : -net > deposit ? -net - deposit : 0n;

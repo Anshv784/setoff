@@ -10,7 +10,7 @@ export default function Page() {
       <DocTitle
         eyebrow="Design"
         title="Smart contract"
-        lead="Setoff.sol: under 300 lines of Solidity, no owner, no upgrades. It stores IOUs, holds deposits, and verifies and applies cycles."
+        lead="Setoff.sol: one contract, no owner, no upgrades. It stores IOUs, holds deposits, verifies and applies cycles, resolves disputes by agreement, and tracks credit lines."
       />
 
       <H2 id="iou">The IOU</H2>
@@ -39,17 +39,23 @@ struct IOU {
           [<C key="2">cancel(id)</C>, "debtor or creditor", "Withdraws (debtor) or rejects (creditor) a pending IOU."],
           [<C key="3">deposit(token, amount)</C>, "anyone", "Moves tokens in and credits your balance."],
           [<C key="4">withdraw(token, amount)</C>, "balance owner", "Moves tokens out, up to your balance."],
-          [<C key="5">settle(ids, parties)</C>, "anyone", "Applies a cycle. Reverts unless every net debtor is covered."],
-          [<C key="6">getIOU(id)</C>, "view", "Returns the IOU, its status and the cycle that settled it."],
+          [<C key="5">settle(ids, amounts, parties, draws)</C>, "anyone", "Applies a cycle: pays each IOU the given amount (partial or full), applies credit draws, then nets. Reverts unless every net debtor is covered."],
+          [<C key="5a">dispute(id)</C>, "debtor or creditor", "Freezes an open IOU so no cycle can pay it."],
+          [<C key="5b">offer(id, remaining)</C>, "debtor or creditor", "Proposes what is still owed on a disputed IOU. Matching offers reopen it at that amount; 0 cancels it."],
+          [<C key="5c">setCreditLine(borrower, token, limit)</C>, "lender", "Lets a borrower overdraw up to limit, funded from the lender's deposit. 0 stops new draws."],
+          [<C key="5d">repay(lender, token, amount)</C>, "borrower", "Repays credit from the borrower's balance."],
+          [<C key="6">getIOU(id)</C>, "view", "Returns the IOU (current amount), its status, the last cycle that paid it, and how much is paid."],
+          [<C key="6a">creditLine(lender, borrower, token)</C>, "view", "Returns the limit and how much is drawn and not yet repaid."],
           [<C key="7">hashIOU(iou)</C>, "view", "The EIP-712 id, for wallets and solvers."],
         ]}
       />
 
       <H2 id="settle">What settle checks</H2>
       <List>
-        <li>The cycle has between 1 and 256 IOUs.</li>
+        <li>The cycle has between 1 and 256 IOUs, with one pay amount for each.</li>
+        <li>Each credit draw is within the line&apos;s remaining limit and the lender&apos;s deposit. Draws move money from lender to borrower before netting.</li>
         <li><C>parties</C> is strictly ascending, which proves it has no duplicates.</li>
-        <li>Each IOU is pending and unexpired. It&apos;s marked settled immediately, which also rejects the same id twice in one call.</li>
+        <li>Each IOU is open (not disputed) and unexpired, and each pay amount is more than 0 and at most what is still owed. Paying the remainder marks it settled. Listing an id twice can split a payment but can never overpay.</li>
         <li>Every debtor and creditor is found in <C>parties</C>. Nets are accumulated per party per token.</li>
         <li>Each negative net is covered by that party&apos;s deposit, otherwise the call reverts with <C>InsufficientDeposit(account, token, needed, available)</C>.</li>
       </List>
@@ -60,7 +66,13 @@ event IOUSubmitted(bytes32 indexed id, address indexed debtor, address indexed c
                    address token, uint128 amount, uint64 deadline, uint256 nonce, bytes32 ref);
 event IOUCancelled(bytes32 indexed id, address indexed by);
 event IOUSettled(bytes32 indexed id, uint64 indexed cycle, address indexed debtor,
-                 address creditor, address token, uint128 amount, bytes32 ref);
+                 address creditor, address token, uint128 amount, uint128 remaining, bytes32 ref);
+event IOUDisputed(bytes32 indexed id, address indexed by);
+event IOUOffer(bytes32 indexed id, address indexed by, uint128 amount);
+event IOUResolved(bytes32 indexed id, uint128 remaining);
+event CreditLineSet(address indexed lender, address indexed borrower, address indexed token, uint128 limit);
+event CreditDrawn(uint64 indexed cycle, address indexed borrower, address indexed lender, address token, uint128 amount);
+event CreditRepaid(address indexed borrower, address indexed lender, address indexed token, uint128 amount);
 event NetPosition(uint64 indexed cycle, address indexed account, address indexed token, int256 net);
 event CycleSettled(uint64 indexed cycle, address indexed solver, uint256 iouCount,
                    uint256[] gross, uint256[] netFunded);
@@ -73,6 +85,7 @@ event Withdrawn(address indexed account, address indexed token, uint256 amount);
         <li><strong>Always fully backed.</strong> The contract always holds exactly the tokens its ledger says it owes, for each currency.</li>
         <li><strong>Nothing is created or lost.</strong> In every cycle, what net debtors pay equals what net creditors receive.</li>
         <li><strong>Never more than the bills.</strong> The money used in a cycle can never exceed the total of the bills it settles.</li>
+        <li><strong>Never overpaid.</strong> Across partial payments, disputes and credit draws, no bill is ever paid more than its amount.</li>
         <li><strong>Bad input is rejected.</strong> Forged signatures, duplicate or expired bills, underfunded debtors and malformed cycles all revert.</li>
       </List>
       <P>
@@ -84,7 +97,9 @@ event Withdrawn(address indexed account, address indexed token, uint256 amount);
       <List>
         <li><strong>No admin.</strong> There is no owner, pause, upgrade or sweep function. Nobody, including whoever deployed it, can move deposits.</li>
         <li><strong>Your balance only drops for bills you authorised:</strong> your signature, or your own transaction.</li>
-        <li><strong>The solver is untrusted.</strong> It can choose which IOUs to include. It cannot add debts, change amounts or overdraw anyone.</li>
+        <li><strong>The solver is untrusted.</strong> It can choose which IOUs to include, how much of each to pay, and which credit to draw. It cannot add debts, pay more than is owed, exceed a credit line, or overdraw anyone.</li>
+        <li><strong>Disputes need both sides.</strong> Only matching offers from the debtor and creditor change a disputed bill.</li>
+        <li><strong>Credit risk stays with the lender</strong> who chose to grant it. Draws come only from that lender&apos;s own deposit.</li>
         <li><strong>The token list is fixed at deployment</strong> (USDC, EURC), so there are no fee-on-transfer or malicious-token surprises.</li>
       </List>
       <Callout kind="warn" title="Unaudited">

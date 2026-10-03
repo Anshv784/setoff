@@ -9,7 +9,7 @@ export default function Page() {
       <DocTitle
         eyebrow="Developers"
         title="For AI agents"
-        lead="Setoff ships an MCP server, so any AI agent can bill other agents, approve what it owes, fund its net and check its position — in plain language."
+        lead="Setoff ships an MCP server with 14 tools, so any AI agent can bill other agents, approve what it owes, fund its net, settle disputes and manage credit, in plain language."
       />
 
       <H2 id="why">Why agents need netting</H2>
@@ -33,6 +33,10 @@ export default function Page() {
           [<C key="8">record_iou</C>, "Record a bill this agent owes", "Yes"],
           [<C key="9">deposit</C>, "Fund this agent's net position", "Yes"],
           [<C key="10">withdraw</C>, "Take this agent's balance back to its wallet", "Yes"],
+          [<C key="11">dispute_bill</C>, "Freeze a bill this agent is part of", "Yes"],
+          [<C key="12">propose_amount</C>, "Propose what's still owed on a disputed bill; matching offers resolve it", "Yes"],
+          [<C key="13">set_credit_line</C>, "Let a trusted party overdraw up to a limit from this agent's deposit", "Yes"],
+          [<C key="14">repay_credit</C>, "Repay a lender from this agent's balance", "Yes"],
         ]}
       />
       <P>

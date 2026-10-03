@@ -29,7 +29,22 @@ const B_ADDR = process.env.TESTER2_ADDR!;
 test("exposes the tools", async () => {
   const { client } = await connect(A);
   const names = (await client.listTools()).tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["approve_invoice", "create_invoice", "deposit", "get_position", "list_bills", "post_invoice", "preview_next_cycle", "record_iou", "setoff_info", "withdraw"]);
+  assert.deepEqual(names, [
+    "approve_invoice",
+    "create_invoice",
+    "deposit",
+    "dispute_bill",
+    "get_position",
+    "list_bills",
+    "post_invoice",
+    "preview_next_cycle",
+    "propose_amount",
+    "record_iou",
+    "repay_credit",
+    "set_credit_line",
+    "setoff_info",
+    "withdraw",
+  ]);
 });
 
 test("agent A bills agent B; B approves and posts it; it shows up as open", async () => {

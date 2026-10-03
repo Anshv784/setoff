@@ -11,6 +11,7 @@ import { PageHeader } from "./shell";
 import { useApp } from "./state";
 import { PrivateNotesCard } from "./notes";
 import { AgentCard } from "./agent-card";
+import { CreditLinesCard } from "./credit";
 
 
 export function OverviewPage() {
@@ -47,6 +48,7 @@ export function WalletPage() {
                   onEnable={enableNotes}
                   onUnlock={unlockNotes}
                 />
+                <CreditLinesCard />
                 <AgentCard />
               </>
             )

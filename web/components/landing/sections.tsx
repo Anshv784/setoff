@@ -211,14 +211,14 @@ export function Product() {
       n: "02",
       title: "Fund only what you actually owe.",
       body: "Setoff adds up everything you owe and everything you're owed, and tells you the one number to deposit. Owe 1,000 and owed 800? Deposit 200.",
-      points: ["One-click deposit", "Withdraw any time", "No one else can touch your balance"],
+      points: ["One-click deposit", "Partners can extend you credit", "Withdraw any time"],
       preview: <NetPreview />,
     },
     {
       n: "03",
       title: "One cycle settles everything.",
       body: "Every bill in the cycle clears in a single transaction. The contract checks every position itself, and if anyone is short, nothing moves at all.",
-      points: ["Final in under a second", "All or nothing", "A record of every cycle"],
+      points: ["Final in under a second", "Pays in parts when you're short", "Dispute anything before it settles"],
       preview: <CyclePreview />,
     },
   ];
@@ -301,10 +301,11 @@ export function ArcSection() {
 
 export function Faq() {
   const qa = [
-    ["Is this a lending platform?", "No. Nobody borrows and nobody earns interest. Setoff settles debts that already exist, using as little cash as possible."],
+    ["Is this a lending platform?", "No. Setoff settles debts that already exist, with no interest. Businesses can optionally give a trusted partner a credit line from their own deposit; that risk stays between the two of them."],
     ["Who holds my money?", "An open contract with no owner and no admin. Only you can withdraw your balance, and it only goes down for bills you approved."],
     ["What does it cost?", "Arc fees are paid in USDC. A cycle of 25 bills costs about two cents in total, shared by the whole network."],
-    ["What if I'm short when a cycle runs?", "Then that cycle doesn't include your bills, and nothing moves for them. They wait in the pool until you've deposited your net."],
+    ["What if I'm short when a cycle runs?", "The cycle pays as much of your bills as your deposit covers, and the rest waits for the next one. If a partner gave you a credit line, the gap can come from that."],
+    ["What if a bill is wrong?", "Dispute it. That freezes the bill until you and the other side propose the same amount still owed — or 0 to cancel it. Nobody else can decide it."],
   ];
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-24 md:px-6 md:py-28">

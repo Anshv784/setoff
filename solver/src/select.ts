@@ -215,6 +215,15 @@ export function selectCycle(
     return x < y ? -1 : x > y ? 1 : 0;
   });
 
+  // One draw per (borrower, lender, token), however many bills it funded.
+  const merged = new Map<string, Draw>();
+  for (const d of draws) {
+    const k = `${d.borrower}:${d.lender}:${d.token}`.toLowerCase();
+    const m = merged.get(k);
+    if (m) m.amount += d.amount;
+    else merged.set(k, { ...d });
+  }
+
   const ids = [...chosen.keys()];
-  return { ids, amounts: ids.map((id) => pay.get(id)!), draws, partial, parties, gross, netFunded };
+  return { ids, amounts: ids.map((id) => pay.get(id)!), draws: [...merged.values()], partial, parties, gross, netFunded };
 }

@@ -25,6 +25,13 @@ export default function Page() {
           leaves the <strong>least total shortfall across everyone</strong>. Ties go to the smaller IOU.
         </li>
         <li><strong>Refill:</strong> retry every dropped IOU, largest first, keeping any that still fit.</li>
+        <li>
+          <strong>Credit:</strong> for each bill still left out, check whether the debtor has credit lines whose lenders have room and spare
+          deposit. If together they cover the gap, add the bill and plan the draws (one per lender).
+        </li>
+        <li>
+          <strong>Partial:</strong> finally, pay part of each remaining bill, up to what its debtor can still cover. The rest stays open.
+        </li>
       </List>
       <Callout title="Why look at everyone, not just the debtor">
         The obvious move is to drop the smallest bill that covers the shortfall. But that bill may be offsetting someone else&apos;s debt, and

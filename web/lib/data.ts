@@ -11,10 +11,17 @@ export type IOURow = {
   debtor: Address;
   creditor: Address;
   token: Address;
+  /** Current face value (a resolved dispute can lower it). */
   amount: bigint;
+  /** Paid so far across cycles; less than `amount` while open = partly paid. */
+  paid: bigint;
+  /** Each cycle that paid part (or all) of it. */
+  payments: { cycle: bigint; amount: bigint }[];
   deadline: bigint;
   ref: Hex;
-  status: "pending" | "settled" | "cancelled" | "expired";
+  status: "pending" | "settled" | "cancelled" | "expired" | "disputed";
+  /** Open dispute proposals for what is still owed. */
+  offers?: { debtor?: bigint; creditor?: bigint };
   cycle?: bigint;
   note?: string;
   submittedTx: Hex;
@@ -34,8 +41,11 @@ export type CycleRow = {
   memo?: string;
 };
 
+export type CreditLineRow = { lender: Address; borrower: Address; token: Address; limit: bigint; used: bigint };
+
 export type Snapshot = {
   tokens: Address[];
+  creditLines: CreditLineRow[];
   /** Published private-note public keys, by lower-case address (hex, 32 bytes). */
   noteKeys: Record<string, Hex>;
   ious: IOURow[];
@@ -74,7 +84,18 @@ export async function loadSnapshot(): Promise<Snapshot> {
   ]);
 
   const setoffEvents = setoffAbi.filter(
-    (x) => x.type === "event" && ["IOUSubmitted", "IOUSettled", "IOUCancelled", "CycleSettled"].includes(x.name),
+    (x) => x.type === "event" && [
+        "IOUSubmitted",
+        "IOUSettled",
+        "IOUCancelled",
+        "IOUDisputed",
+        "IOUOffer",
+        "IOUResolved",
+        "CycleSettled",
+        "CreditLineSet",
+        "CreditDrawn",
+        "CreditRepaid",
+      ].includes(x.name),
   );
   const [logs, memoLogs] = await Promise.all([
     logsInWindows(
@@ -111,6 +132,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
   }
 
   const ious = new Map<Hex, IOURow>();
+  const lines = new Map<string, CreditLineRow>();
   const cycles: CycleRow[] = [];
   for (const log of logs as (Log & { eventName: string; args: Record<string, unknown> })[]) {
     const a = log.args;
@@ -121,23 +143,57 @@ export async function loadSnapshot(): Promise<Snapshot> {
         creditor: a.creditor as Address,
         token: a.token as Address,
         amount: a.amount as bigint,
+        paid: 0n,
+        payments: [],
         deadline: a.deadline as bigint,
         ref: a.ref as Hex,
         status: "pending",
         submittedTx: log.transactionHash!,
         note: memos.get(a.ref as Hex),
       };
-      if (row.deadline < block.timestamp) row.status = "expired";
       ious.set(row.id, row);
     } else if (log.eventName === "IOUSettled") {
       const row = ious.get(a.id as Hex);
       if (row) {
-        row.status = "settled";
+        row.paid += a.amount as bigint;
+        row.payments.push({ cycle: a.cycle as bigint, amount: a.amount as bigint });
         row.cycle = a.cycle as bigint;
+        if ((a.remaining as bigint) === 0n) row.status = "settled";
       }
     } else if (log.eventName === "IOUCancelled") {
       const row = ious.get(a.id as Hex);
       if (row) row.status = "cancelled";
+    } else if (log.eventName === "IOUDisputed") {
+      const row = ious.get(a.id as Hex);
+      if (row) {
+        row.status = "disputed";
+        row.offers = {};
+      }
+    } else if (log.eventName === "IOUOffer") {
+      const row = ious.get(a.id as Hex);
+      if (row) {
+        row.offers ??= {};
+        const by = (a.by as string).toLowerCase();
+        if (by === row.debtor.toLowerCase()) row.offers.debtor = a.amount as bigint;
+        else row.offers.creditor = a.amount as bigint;
+      }
+    } else if (log.eventName === "IOUResolved") {
+      const row = ious.get(a.id as Hex);
+      if (row) {
+        const remaining = a.remaining as bigint;
+        row.amount = row.paid + remaining;
+        row.status = remaining > 0n ? "pending" : row.paid > 0n ? "settled" : "cancelled";
+        row.offers = undefined;
+      }
+    } else if (log.eventName === "CreditLineSet") {
+      const k = `${a.lender}:${a.borrower}:${a.token}`.toLowerCase();
+      const line = lines.get(k) ?? { lender: a.lender as Address, borrower: a.borrower as Address, token: a.token as Address, limit: 0n, used: 0n };
+      line.limit = a.limit as bigint;
+      lines.set(k, line);
+    } else if (log.eventName === "CreditDrawn" || log.eventName === "CreditRepaid") {
+      const k = `${a.lender}:${a.borrower}:${a.token}`.toLowerCase();
+      const line = lines.get(k);
+      if (line) line.used += log.eventName === "CreditDrawn" ? (a.amount as bigint) : -(a.amount as bigint);
     } else if (log.eventName === "CycleSettled") {
       const gross: Record<string, bigint> = {};
       const netFunded: Record<string, bigint> = {};
@@ -163,6 +219,8 @@ export async function loadSnapshot(): Promise<Snapshot> {
     }),
   );
 
+  for (const i of ious.values()) if (i.status === "pending" && i.deadline < block.timestamp) i.status = "expired";
+
   const parties = new Set<Address>();
   for (const i of ious.values()) parties.add(i.debtor).add(i.creditor);
   // Names are a nicety: a registry hiccup must not take the dashboard down.
@@ -171,8 +229,11 @@ export async function loadSnapshot(): Promise<Snapshot> {
     for (const [k, v] of found) identities.set(k, v);
   } catch {}
 
-  return { tokens: [...tokens], noteKeys, ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
+  return { tokens: [...tokens], creditLines: [...lines.values()], noteKeys, ious: [...ious.values()].reverse(), cycles: cycles.reverse(), head, now: block.timestamp };
 }
+
+/** What is still owed on a bill. */
+export const remainingOf = (i: IOURow) => i.amount - i.paid;
 
 export type Totals = { gross: Record<string, bigint>; netFunded: Record<string, bigint>; settledIous: number };
 

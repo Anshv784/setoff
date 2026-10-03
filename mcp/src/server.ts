@@ -162,6 +162,47 @@ export function createServer(agent = s.agentFromEnv()) {
     guard((i: { amount: string; token: s.Token }) => s.withdraw(needAgent(), i)),
   );
 
+  server.registerTool(
+    "dispute_bill",
+    {
+      title: "Dispute a bill",
+      description: "Freeze an open bill this agent owes or is owed. No cycle can pay it until both sides propose the same amount still owed.",
+      inputSchema: { id: z.string().regex(/^0x[0-9a-fA-F]{64}$/).describe("The bill id (from list_bills)") },
+    },
+    guard((i: { id: string }) => s.disputeBill(needAgent(), { id: i.id as `0x${string}` })),
+  );
+
+  server.registerTool(
+    "propose_amount",
+    {
+      title: "Propose what is still owed",
+      description: "On a disputed bill, propose the amount still owed. When both parties propose the same amount the bill reopens at it; 0 cancels it.",
+      inputSchema: { id: z.string().regex(/^0x[0-9a-fA-F]{64}$/), remaining: z.string().regex(/^\d+(\.\d{1,6})?$/) },
+    },
+    guard((i: { id: string; remaining: string }) => s.proposeAmount(needAgent(), { id: i.id as `0x${string}`, remaining: i.remaining })),
+  );
+
+  server.registerTool(
+    "set_credit_line",
+    {
+      title: "Grant a credit line",
+      description:
+        "Let a trusted party overdraw up to a limit in cycles, funded from this agent's deposit and recorded as owed back. Risk: if they never repay, the agent loses what they drew. 0 stops new draws.",
+      inputSchema: { borrower: address, limit: amount, token },
+    },
+    guard((i: { borrower: string; limit: string; token: s.Token }) => s.setCreditLine(needAgent(), { ...i, borrower: i.borrower as Address })),
+  );
+
+  server.registerTool(
+    "repay_credit",
+    {
+      title: "Repay credit",
+      description: "Repay a lender from this agent's Setoff balance.",
+      inputSchema: { lender: address, amount, token },
+    },
+    guard((i: { lender: string; amount: string; token: s.Token }) => s.repayCredit(needAgent(), { ...i, lender: i.lender as Address })),
+  );
+
   return server;
 }
 

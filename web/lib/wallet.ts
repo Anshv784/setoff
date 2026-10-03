@@ -215,8 +215,8 @@ export async function postInvoice(account: Address, inv: Invoice) {
 
 export async function iouStatus(iou: IOU) {
   const id = await client.readContract({ address: net.setoff, abi: setoffAbi, functionName: "hashIOU", args: [iou] });
-  const [, status, cycle] = await client.readContract({ address: net.setoff, abi: setoffAbi, functionName: "getIOU", args: [id] });
-  return { id, status: (["none", "pending", "settled", "cancelled"] as const)[status] ?? "none", cycle };
+  const [, status, cycle, paid] = await client.readContract({ address: net.setoff, abi: setoffAbi, functionName: "getIOU", args: [id] });
+  return { id, status: (["none", "pending", "settled", "cancelled", "disputed"] as const)[status] ?? "none", cycle, paid };
 }
 
 /** Register an ERC-8004 identity so the dashboard shows a name instead of an address. */
@@ -244,4 +244,30 @@ export async function publishNoteKey(account: Address, publicKey: Uint8Array) {
   return confirm(
     await w.writeContract({ address: MEMO, abi: memoAbi, functionName: "memo", args: [net.setoff, data, NOTE_KEY_ID, bytesToHex(publicKey)] }),
   );
+}
+
+// ---------------------------------------------------------------- disputes & credit
+
+/** Freeze an open bill while you and the other party agree on what's owed. */
+export async function disputeBill(account: Address, id: Hex) {
+  const w = await wallet(account);
+  return confirm(await w.writeContract({ address: net.setoff, abi: setoffAbi, functionName: "dispute", args: [id] }));
+}
+
+/** Propose what's still owed on a disputed bill; when both sides match, it reopens (0 cancels). */
+export async function offerAmount(account: Address, id: Hex, remaining: bigint) {
+  const w = await wallet(account);
+  return confirm(await w.writeContract({ address: net.setoff, abi: setoffAbi, functionName: "offer", args: [id, remaining] }));
+}
+
+/** Let `borrower` overdraw up to `limit` in cycles, funded from your deposit. 0 stops new draws. */
+export async function setCreditLine(account: Address, borrower: Address, token: Address, limit: bigint) {
+  const w = await wallet(account);
+  return confirm(await w.writeContract({ address: net.setoff, abi: setoffAbi, functionName: "setCreditLine", args: [borrower, token, limit] }));
+}
+
+/** Repay a lender from your Setoff balance. */
+export async function repayCredit(account: Address, lender: Address, token: Address, amount: bigint) {
+  const w = await wallet(account);
+  return confirm(await w.writeContract({ address: net.setoff, abi: setoffAbi, functionName: "repay", args: [lender, token, amount] }));
 }

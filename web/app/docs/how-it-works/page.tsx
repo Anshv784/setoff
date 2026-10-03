@@ -56,6 +56,35 @@ export default function Page() {
         on <C>withdraw</C>; settlement itself never transfers tokens.
       </P>
 
+      <H2 id="partial">Paying in parts</H2>
+      <P>
+        If you can&apos;t cover a whole bill, a cycle can pay <strong>part of it</strong>, as much as your deposit allows, and the rest stays
+        open for the next cycle. Your bills show the progress (for example &quot;Part paid · 1.50 of 4.00&quot;). A bill is only marked settled
+        once it&apos;s paid in full, and no cycle can ever pay more than is owed.
+      </P>
+
+      <H2 id="disputes">Disputes</H2>
+      <P>
+        If something&apos;s wrong with a bill, either side can <strong>dispute</strong> it. That freezes it: no cycle can pay it. Then each side
+        proposes how much is still owed. As soon as both proposals match, the bill reopens at that amount, or is cancelled if you agree on 0.
+        Anything already paid stays paid.
+      </P>
+      <Callout title="No one else decides">
+        There&apos;s no arbiter and no admin. Only the debtor and the creditor can resolve a dispute, and only by agreeing. Either side can still
+        cancel a disputed bill outright.
+      </Callout>
+
+      <H2 id="credit">Credit lines</H2>
+      <P>
+        A business can let a partner it trusts <strong>overdraw up to a limit</strong>. If that partner is short when a cycle runs, the gap is
+        paid from the lender&apos;s own deposit and recorded as owed back to the lender. The partner repays from their Setoff balance whenever
+        they like. The lender can lower the limit, or set it to 0 to stop new draws, at any time.
+      </P>
+      <Callout kind="warn" title="The risk stays with the lender">
+        Credit is a promise between two parties. If a borrower never repays, the lender loses what was drawn. Nobody else in the network is
+        affected, and there&apos;s no interest: Setoff only records what was lent and repaid.
+      </Callout>
+
       <H2 id="private-notes">Private notes</H2>
       <P>
         Invoice notes can be encrypted so only the debtor and creditor can read them. Each wallet turns this on once on the Wallet page: a free

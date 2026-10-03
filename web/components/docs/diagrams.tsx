@@ -169,9 +169,18 @@ export function ArchitectureDiagram() {
 
 /** States an IOU can be in. */
 export function LifecycleDiagram() {
-  const state = (x: number, y: number, label: string, sub: string, accent?: boolean) => (
+  const state = (x: number, y: number, label: string, sub: string, tone?: "accent" | "warn") => (
     <g>
-      <rect x={x} y={y} width={170} height={58} rx={29} fill={T.card} stroke={accent ? T.accent : T.border} strokeWidth={accent ? 1.5 : 1} />
+      <rect
+        x={x}
+        y={y}
+        width={170}
+        height={58}
+        rx={29}
+        fill={T.card}
+        stroke={tone === "accent" ? T.accent : tone === "warn" ? "rgb(245 158 11 / 0.6)" : T.border}
+        strokeWidth={tone ? 1.5 : 1}
+      />
       <text x={x + 85} y={y + 25} textAnchor="middle" fontSize={13} fontWeight={600} fill={T.fg}>
         {label}
       </text>
@@ -181,23 +190,41 @@ export function LifecycleDiagram() {
     </g>
   );
   return (
-    <svg viewBox="0 0 900 290" className="h-auto w-full min-w-[640px]" role="img" aria-labelledby="life-t">
-      <title id="life-t">IOU lifecycle: submitted IOUs are pending; a pending IOU is settled in a cycle, cancelled by either party, or expires at its deadline.</title>
+    <svg viewBox="0 0 900 350" className="h-auto w-full min-w-[640px]" role="img" aria-labelledby="life-t">
+      <title id="life-t">
+        IOU lifecycle: a submitted IOU is pending; cycles can pay it in parts until it is settled; either party can dispute it, which freezes it
+        until both offer the same amount; it can also be cancelled, or expire at its deadline.
+      </title>
       <Defs />
-      {state(20, 116, "Draft", "invoice link, off-chain")}
-      {state(290, 116, "Pending", "in the public pool", true)}
-      {state(680, 20, "Settled", "in cycle N", true)}
-      {state(680, 116, "Cancelled", "by debtor or creditor")}
-      {state(680, 212, "Expired", "deadline passed")}
-      <path d="M190 145 H290" stroke={T.muted} markerEnd="url(#d-arrow)" fill="none" />
-      <Label x={240} y={133} anchor="middle">submit()</Label>
-      <Label x={240} y={168} anchor="middle">signed or by debtor</Label>
-      <path d="M460 132 C 560 132, 580 49, 680 49" stroke={T.accent} strokeWidth={1.5} markerEnd="url(#d-arrow-accent)" fill="none" />
-      <Label x={560} y={78} anchor="middle">settle()</Label>
-      <path d="M460 145 H680" stroke={T.muted} markerEnd="url(#d-arrow)" fill="none" />
-      <Label x={570} y={138} anchor="middle">cancel()</Label>
-      <path d="M460 158 C 560 158, 580 241, 680 241" stroke={T.muted} strokeDasharray="4 4" markerEnd="url(#d-arrow)" fill="none" />
-      <Label x={560} y={222} anchor="middle">time passes</Label>
+      {state(20, 136, "Draft", "invoice link, off-chain")}
+      {state(290, 136, "Pending", "in the public pool", "accent")}
+      {state(290, 272, "Disputed", "frozen until both agree", "warn")}
+      {state(680, 40, "Settled", "paid in full", "accent")}
+      {state(680, 136, "Cancelled", "by debtor or creditor")}
+      {state(680, 232, "Expired", "deadline passed")}
+
+      <path d="M190 165 H290" stroke={T.muted} markerEnd="url(#d-arrow)" fill="none" />
+      <Label x={240} y={153} anchor="middle">submit()</Label>
+      <Label x={240} y={188} anchor="middle">signed or by debtor</Label>
+
+      {/* Partial payments loop back into Pending. */}
+      <path d="M345 136 C 345 86, 435 86, 435 136" stroke={T.accent} markerEnd="url(#d-arrow-accent)" fill="none" />
+      <text x={390} y={80} textAnchor="middle" fontSize={11} fill={T.fg}>
+        partial payment
+      </text>
+
+      <path d="M460 152 C 560 152, 580 69, 680 69" stroke={T.accent} strokeWidth={1.5} markerEnd="url(#d-arrow-accent)" fill="none" />
+      <Label x={565} y={96} anchor="middle">settle() pays the rest</Label>
+      <path d="M460 165 H680" stroke={T.muted} markerEnd="url(#d-arrow)" fill="none" />
+      <Label x={570} y={158} anchor="middle">cancel()</Label>
+      <path d="M460 178 C 560 178, 580 261, 680 261" stroke={T.muted} strokeDasharray="4 4" markerEnd="url(#d-arrow)" fill="none" />
+      <Label x={560} y={242} anchor="middle">time passes</Label>
+
+      {/* Disputes */}
+      <path d="M350 194 V272" stroke={T.muted} markerEnd="url(#d-arrow)" fill="none" />
+      <Label x={342} y={238} anchor="end">dispute()</Label>
+      <path d="M410 272 V194" stroke={T.accent} markerEnd="url(#d-arrow-accent)" fill="none" />
+      <Label x={418} y={238}>matching offers</Label>
     </svg>
   );
 }

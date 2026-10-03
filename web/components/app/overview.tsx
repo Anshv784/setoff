@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Address } from "viem";
 import { ArrowRight, Clock, FileSignature, Wallet } from "lucide-react";
 import { USDC } from "@/lib/config";
-import { savedBps, totals, type IOURow } from "@/lib/data";
+import { remainingOf, savedBps, totals, type IOURow } from "@/lib/data";
 import { fmtAgo, fmtAmount, fmtPct } from "@/lib/format";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,10 +17,10 @@ function nextCycle(ious: IOURow[]) {
   const open = ious.filter((i) => i.status === "pending" && i.token.toLowerCase() === usdcKey);
   const nets = new Map<string, bigint>();
   for (const i of open) {
-    nets.set(i.debtor.toLowerCase(), (nets.get(i.debtor.toLowerCase()) ?? 0n) - i.amount);
-    nets.set(i.creditor.toLowerCase(), (nets.get(i.creditor.toLowerCase()) ?? 0n) + i.amount);
+    nets.set(i.debtor.toLowerCase(), (nets.get(i.debtor.toLowerCase()) ?? 0n) - remainingOf(i));
+    nets.set(i.creditor.toLowerCase(), (nets.get(i.creditor.toLowerCase()) ?? 0n) + remainingOf(i));
   }
-  const gross = open.reduce((s, i) => s + i.amount, 0n);
+  const gross = open.reduce((s, i) => s + remainingOf(i), 0n);
   const net = [...nets.values()].reduce((s, v) => (v < 0n ? s - v : s), 0n);
   return { count: open.length, gross, net, parties: nets.size };
 }
@@ -29,8 +29,8 @@ function position(ious: IOURow[], me?: Address) {
   if (!me) return undefined;
   const m = me.toLowerCase();
   const open = ious.filter((i) => i.status === "pending" && i.token.toLowerCase() === usdcKey);
-  const owe = open.filter((i) => i.debtor.toLowerCase() === m).reduce((s, i) => s + i.amount, 0n);
-  const owed = open.filter((i) => i.creditor.toLowerCase() === m).reduce((s, i) => s + i.amount, 0n);
+  const owe = open.filter((i) => i.debtor.toLowerCase() === m).reduce((s, i) => s + remainingOf(i), 0n);
+  const owed = open.filter((i) => i.creditor.toLowerCase() === m).reduce((s, i) => s + remainingOf(i), 0n);
   const settled = ious.filter((i) => i.status === "settled" && (i.debtor.toLowerCase() === m || i.creditor.toLowerCase() === m)).length;
   return { owe, owed, net: owed - owe, settled };
 }

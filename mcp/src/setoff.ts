@@ -19,7 +19,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { MEMO, MULTICALL3_FROM, network, USDC } from "../../solver/src/config.ts";
-import { loadBalances, loadPool, publicClient } from "../../solver/src/chain.ts";
+import { loadBalances, loadCreditLines, loadPool, publicClient } from "../../solver/src/chain.ts";
 import { selectCycle } from "../../solver/src/select.ts";
 import { setoffAbi } from "../../solver/src/setoffAbi.ts";
 import { memoAbi } from "../../solver/src/memoAbi.ts";
@@ -97,7 +97,9 @@ export type Bill = {
   creditor: Address;
   token: Token;
   amount: string;
-  status: "pending" | "settled" | "cancelled" | "expired";
+  /** Paid so far; less than amount while open = partly paid. */
+  paid: string;
+  status: "pending" | "settled" | "cancelled" | "expired" | "disputed";
   cycle?: string;
   note?: string;
 };
@@ -106,9 +108,9 @@ export type Bill = {
 export async function listBills(): Promise<Bill[]> {
   const head = await client.getBlockNumber({ cacheTime: 0 });
   const { timestamp } = await client.getBlock();
-  const events = setoffAbi.filter((x) => x.type === "event" && ["IOUSubmitted", "IOUSettled", "IOUCancelled"].includes(x.name));
+  const events = setoffAbi.filter((x) => x.type === "event" && ["IOUSubmitted", "IOUSettled", "IOUCancelled", "IOUDisputed", "IOUResolved"].includes(x.name));
   const memoEvent = getAbiItem({ abi: memoAbi, name: "Memo" });
-  const rows = new Map<Hex, Bill & { deadline: bigint; ref: Hex }>();
+  const rows = new Map<Hex, Bill & { deadline: bigint; ref: Hex; paidRaw: bigint; amountRaw: bigint }>();
   const notes = new Map<string, string>();
   for (let from = net.deployBlock; from <= head; from += 10_000n) {
     const to = from + 9_999n > head ? head : from + 9_999n;
@@ -132,20 +134,40 @@ export async function listBills(): Promise<Bill[]> {
           creditor: a.creditor as Address,
           token: tokenSymbol(a.token as string),
           amount: fmt(a.amount as bigint),
-          status: (a.deadline as bigint) < timestamp ? "expired" : "pending",
+          amountRaw: a.amount as bigint,
+          paid: "0",
+          paidRaw: 0n,
+          status: "pending",
           deadline: a.deadline as bigint,
           ref: a.ref as Hex,
         });
       } else if (log.eventName === "IOUSettled") {
         const r = rows.get(a.id as Hex);
-        if (r) Object.assign(r, { status: "settled", cycle: String(a.cycle) });
+        if (r) {
+          r.paidRaw += a.amount as bigint;
+          r.paid = fmt(r.paidRaw);
+          r.cycle = String(a.cycle);
+          if ((a.remaining as bigint) === 0n) r.status = "settled";
+        }
       } else if (log.eventName === "IOUCancelled") {
         const r = rows.get(a.id as Hex);
         if (r) r.status = "cancelled";
+      } else if (log.eventName === "IOUDisputed") {
+        const r = rows.get(a.id as Hex);
+        if (r) r.status = "disputed";
+      } else if (log.eventName === "IOUResolved") {
+        const r = rows.get(a.id as Hex);
+        if (r) {
+          const remaining = a.remaining as bigint;
+          r.amountRaw = r.paidRaw + remaining;
+          r.amount = fmt(r.amountRaw);
+          r.status = remaining > 0n ? "pending" : r.paidRaw > 0n ? "settled" : "cancelled";
+        }
       }
     }
   }
-  return [...rows.values()].reverse().map(({ deadline: _d, ref, ...b }) => {
+  for (const r of rows.values()) if (r.status === "pending" && r.deadline < timestamp) r.status = "expired";
+  return [...rows.values()].reverse().map(({ deadline: _d, ref, paidRaw: _p, amountRaw: _a, ...b }) => {
     const note = notes.get(ref);
     return { ...b, note: note?.startsWith("setoff-enc:v1:") ? "[private note]" : note };
   });
@@ -159,7 +181,8 @@ export async function getPosition(address: Address) {
   const out: Record<string, { owe: string; owed: string; net: string; deposited: string; toDeposit: string }> = {};
   for (const t of tokens) {
     const sym = tokenSymbol(t);
-    const sum = (f: (b: Bill) => boolean) => bills.filter((b) => b.token === sym && f(b)).reduce((s, b) => s + parseUnits(b.amount, 6), 0n);
+    const sum = (f: (b: Bill) => boolean) =>
+      bills.filter((b) => b.token === sym && f(b)).reduce((s, b) => s + parseUnits(b.amount, 6) - parseUnits(b.paid, 6), 0n);
     const owe = sum((b) => b.debtor.toLowerCase() === me);
     const owed = sum((b) => b.creditor.toLowerCase() === me);
     const deposited = await client.readContract({ address: net.setoff, abi: setoffAbi, functionName: "balanceOf", args: [address, t] });
@@ -174,13 +197,16 @@ export async function getPosition(address: Address) {
 export async function previewNextCycle() {
   const pool = await loadPool(client, net);
   if (pool.length === 0) return { openBills: 0, message: "No open bills." };
-  const balances = await loadBalances(client, net, pool);
+  const lines = await loadCreditLines(client, net);
+  const balances = await loadBalances(client, net, pool, lines.map((l) => l.lender));
   const { timestamp } = await client.getBlock();
-  const cycle = selectCycle(pool, balances, timestamp);
+  const cycle = selectCycle(pool, balances, timestamp, undefined, lines);
   if (!cycle) return { openBills: pool.length, settleable: 0, message: "No fundable cycle yet: some net debtors haven't deposited enough." };
   return {
     openBills: pool.length,
     settleable: cycle.ids.length,
+    paidInPart: cycle.partial,
+    creditDraws: cycle.draws.length,
     perToken: [...cycle.gross.entries()].map(([t, g]) => ({
       token: tokenSymbol(t),
       cleared: fmt(g),
@@ -322,4 +348,32 @@ export async function withdraw(agent: Agent, input: { amount: string; token: Tok
   // Withdrawing returns the agent's own money, so the spending cap doesn't apply.
   if (amount <= 0n) throw new Error("Amount must be greater than zero.");
   return send(agent, { address: net.setoff, abi: setoffAbi, functionName: "withdraw", args: [tokenAddress(input.token), amount] });
+}
+
+// --------------------------------------------------------------- disputes & credit
+
+/** Freeze an open bill this agent is part of, so no cycle pays it until both sides agree. */
+export async function disputeBill(agent: Agent, input: { id: Hex }) {
+  return send(agent, { address: net.setoff, abi: setoffAbi, functionName: "dispute", args: [input.id] });
+}
+
+/** Propose what is still owed on a disputed bill. Matching proposals reopen it; 0 cancels it. */
+export async function proposeAmount(agent: Agent, input: { id: Hex; remaining: string }) {
+  const remaining = parseUnits(input.remaining, 6);
+  if (remaining > 0n) checkCap(agent, remaining);
+  return send(agent, { address: net.setoff, abi: setoffAbi, functionName: "offer", args: [input.id, remaining] });
+}
+
+/** Let `borrower` overdraw up to `limit`, funded from this agent's deposit. 0 stops new draws. */
+export async function setCreditLine(agent: Agent, input: { borrower: Address; limit: string; token: Token }) {
+  const limit = parseUnits(input.limit, 6);
+  if (limit > 0n) checkCap(agent, limit);
+  return send(agent, { address: net.setoff, abi: setoffAbi, functionName: "setCreditLine", args: [input.borrower, tokenAddress(input.token), limit] });
+}
+
+/** Repay a lender from this agent's Setoff balance. */
+export async function repayCredit(agent: Agent, input: { lender: Address; amount: string; token: Token }) {
+  const amount = parseUnits(input.amount, 6);
+  if (amount <= 0n) throw new Error("Amount must be greater than zero.");
+  return send(agent, { address: net.setoff, abi: setoffAbi, functionName: "repay", args: [input.lender, tokenAddress(input.token), amount] });
 }

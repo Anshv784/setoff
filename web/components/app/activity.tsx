@@ -150,12 +150,13 @@ function CycleList({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
-const STATUS_LABEL: Record<IOURow["status"], string> = { pending: "Open", settled: "Settled", cancelled: "Cancelled", expired: "Expired" };
+const STATUS_LABEL: Record<IOURow["status"], string> = { pending: "Open", settled: "Settled", cancelled: "Cancelled", expired: "Expired", disputed: "Disputed" };
 const STATUS_STYLE: Record<IOURow["status"], string> = {
   pending: "border-primary/40 bg-primary/10 text-primary",
   settled: "border-border bg-muted text-foreground",
   cancelled: "border-border text-muted-foreground",
   expired: "border-border text-muted-foreground",
+  disputed: "border-amber-500/40 bg-amber-500/10 text-amber-300",
 };
 
 function noteOf(i: IOURow) {
@@ -171,7 +172,7 @@ function Bills({ snapshot, initial }: { snapshot: Snapshot; initial: Status }) {
   const [limit, setLimit] = useState(PAGE);
 
   const counts = useMemo(() => {
-    const c: Record<Status, number> = { all: snapshot.ious.length, pending: 0, settled: 0, cancelled: 0, expired: 0 };
+    const c: Record<Status, number> = { all: snapshot.ious.length, pending: 0, settled: 0, cancelled: 0, expired: 0, disputed: 0 };
     for (const i of snapshot.ious) c[i.status]++;
     return c;
   }, [snapshot]);
@@ -190,7 +191,7 @@ function Bills({ snapshot, initial }: { snapshot: Snapshot; initial: Status }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-2">
-          {(["all", "pending", "settled", "cancelled", "expired"] as const).map((s) => (
+          {(["all", "pending", "disputed", "settled", "cancelled", "expired"] as const).map((s) => (
             <button
               key={s}
               type="button"
@@ -242,7 +243,11 @@ function Bills({ snapshot, initial }: { snapshot: Snapshot; initial: Status }) {
                 <span>
                   <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs ${STATUS_STYLE[i.status]}`}>
                     {STATUS_LABEL[i.status]}
-                    {i.cycle ? ` · #${String(i.cycle)}` : ""}
+                    {i.status === "pending" && i.paid > 0n
+                      ? ` · ${Number((i.paid * 100n) / i.amount)}% paid`
+                      : i.status === "settled" && i.cycle
+                        ? ` · #${String(i.cycle)}`
+                        : ""}
                   </span>
                 </span>
               </li>

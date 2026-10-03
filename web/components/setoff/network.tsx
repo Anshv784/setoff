@@ -35,10 +35,11 @@ export function NetworkView({ snapshot, account }: { snapshot: Snapshot; account
   const me = account?.toLowerCase();
 
   // React Compiler memoizes these; no manual useMemo needed.
-  const rows =
+  // Open bills count what's still owed; a past cycle counts what was paid in that cycle.
+  const rows: IOURow[] =
     source === "open"
-      ? snapshot.ious.filter((i) => i.status === "pending")
-      : snapshot.ious.filter((i) => i.status === "settled" && String(i.cycle) === source);
+      ? snapshot.ious.filter((i) => i.status === "pending").map((i) => ({ ...i, amount: i.amount - i.paid }))
+      : snapshot.ious.flatMap((i) => i.payments.filter((p) => String(p.cycle) === source).map((p) => ({ ...i, amount: p.amount })));
   const ious = scope === "mine" && me ? rows.filter((i) => i.debtor.toLowerCase() === me || i.creditor.toLowerCase() === me) : rows;
   const graph = build(ious, me);
 

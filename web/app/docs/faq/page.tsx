@@ -4,7 +4,13 @@ import { DocTitle, H2, P } from "@/components/docs/ui";
 export const metadata: Metadata = { title: "FAQ" };
 
 const QA: [string, string, React.ReactNode][] = [
-  ["lending", "Is this a lending platform?", "No. Nobody borrows and nobody earns interest. Setoff settles debts that already exist, using as little cash as possible."],
+  [
+    "lending",
+    "Is this a lending platform?",
+    "No. Setoff settles debts that already exist, using as little cash as possible, and nobody earns interest. Businesses can optionally grant a trusted partner a credit line, but that's a private promise between those two: draws come only from the lender's own deposit, and the risk stays with them.",
+  ],
+  ["short", "What if I'm short when a cycle runs?", "The cycle pays as much of your bills as your deposit allows, and the rest stays open for the next cycle. If a partner has given you a credit line, the gap can be drawn from it instead."],
+  ["dispute", "Can I dispute a bill?", "Yes. Either side can dispute an open bill, which freezes it. Then both of you propose what's still owed; when the amounts match it reopens at that amount (or is cancelled at 0). No one else can decide it for you."],
   [
     "saves",
     "If transfers on Arc already cost a fraction of a cent, what does netting save?",
