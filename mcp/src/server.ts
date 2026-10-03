@@ -50,7 +50,7 @@ export function createServer(agent = s.agentFromEnv()) {
       tokens: { USDC: s.tokenAddress("USDC"), EURC: s.tokenAddress("EURC") },
       agent: agent ? { address: agent.address, maxAmountPerAction: formatUnits(agent.maxAmount, 6) } : "read-only (no SETOFF_AGENT_PK)",
       howItWorks:
-        "Bills (IOUs) between parties are netted each cycle; each party only funds its net position. Invoices are links the debtor approves with a free signature.",
+        "Bills (IOUs) between parties are netted each cycle; each party only funds its net position. Invoices are links the debtor approves with a free signature. A cycle can pay part of a bill when the debtor is short; either party can dispute an open bill, which freezes it until both propose the same amount; lenders can grant credit lines funded from their own deposit.",
     })),
   );
 

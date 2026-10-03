@@ -20,11 +20,12 @@ export default function Page() {
       <Table
         head={["Component", "Where", "Responsibility", "Trust"]}
         rows={[
-          [<strong key="a">Setoff contract</strong>, "Arc", "IOU pool, deposit ledger, cycle verification and settlement", "The only source of truth. No owner, no admin, no upgrade path."],
+          [<strong key="a">Setoff contract</strong>, "Arc", "IOU pool (incl. partial payments and disputes), deposit ledger, credit lines, cycle verification and settlement", "The only source of truth. No owner, no admin, no upgrade path."],
           ["Memo", "Arc (system)", "Wraps calls so the sender is preserved and attaches an indexed note", "Arc protocol contract"],
           ["Multicall3From", "Arc (system)", "Batches approve + deposit with the wallet as sender", "Arc protocol contract"],
           ["ERC-8004 registry", "Arc", "Names for addresses; the dashboard verifies current ownership", "Display only"],
-          ["Solver", "Off-chain cron", "Chooses which pending IOUs go into a cycle", "Untrusted. Anyone can run one."],
+          ["Solver", "Off-chain cron", "Chooses which IOUs go into a cycle, how much of each to pay, and which credit to draw", "Untrusted. Anyone can run one."],
+          ["MCP server", "Agent's machine", "Gives AI agents Setoff tools with a spending cap", "Untrusted. Uses the agent's own wallet."],
           ["Dashboard", "Static site", "Reads logs and contract state; prepares transactions for your wallet", "Untrusted. Your wallet signs everything."],
         ]}
       />

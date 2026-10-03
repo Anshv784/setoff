@@ -127,8 +127,8 @@ export function ArchitectureDiagram() {
         no owner · no admin key
       </text>
       {[
-        { y: 148, t: "IOU pool", s: "pending · settled · cancelled" },
-        { y: 236, t: "Deposit ledger", s: "balanceOf[account][token]" },
+        { y: 148, t: "IOU pool", s: "open · part-paid · disputed" },
+        { y: 236, t: "Ledger + credit lines", s: "balances · limits · draws" },
         { y: 324, t: "settle() verifier", s: "nets sum to 0 · debits ≤ deposits" },
       ].map((c) => (
         <g key={c.t}>

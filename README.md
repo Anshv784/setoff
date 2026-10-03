@@ -115,9 +115,9 @@ Every feature below is used in the deployed flow and checked on-chain.
 
 | Action | Gas | At mainnet price |
 |---|---|---|
-| Deploy `Setoff` | ~1.9M | ~$0.04 |
-| Cycle: 8 IOUs | 393,867 | ~$0.008 |
-| Cycle: 25 IOUs | 821,314 | ~$0.016 |
+| Deploy `Setoff` | 2,598,084 | ~$0.05 |
+| Cycle: 6 IOUs | 323,108 | ~$0.006 |
+| Cycle: 25 IOUs | 808,323 | ~$0.016 |
 
 ---
 

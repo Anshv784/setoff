@@ -353,7 +353,7 @@ function AgentTranscript() {
         <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
           <span className="font-mono text-[11px] text-muted-foreground">agent · setoff mcp</span>
           <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-primary" aria-hidden /> 10 tools
+            <span className="size-1.5 rounded-full bg-primary" aria-hidden /> 14 tools
           </span>
         </div>
         <ol className="flex flex-col gap-3 p-5" aria-hidden>

@@ -43,6 +43,32 @@ export default function Page() {
           <strong>Withdraw any time.</strong> Whatever you&apos;re owed sits in your balance until you take it out.
         </li>
       </List>
+      <H2 id="also">Also built in</H2>
+      <List>
+        <li>
+          <strong>Partial payments.</strong> Short this cycle? It pays what your deposit covers; the rest waits.{" "}
+          <Link href="/docs/how-it-works#partial" className="text-primary hover:underline">More</Link>
+        </li>
+        <li>
+          <strong>Disputes.</strong> Freeze a bill and settle it by agreeing on what&apos;s still owed.{" "}
+          <Link href="/docs/how-it-works#disputes" className="text-primary hover:underline">More</Link>
+        </li>
+        <li>
+          <strong>Credit lines.</strong> Let a trusted partner overdraw from your deposit, up to a limit.{" "}
+          <Link href="/docs/how-it-works#credit" className="text-primary hover:underline">More</Link>
+        </li>
+        <li>
+          <strong>Private notes.</strong> Invoice text encrypted so only the two parties can read it.{" "}
+          <Link href="/docs/how-it-works#private-notes" className="text-primary hover:underline">More</Link>
+        </li>
+        <li>
+          <strong>Names.</strong> Counterparties show up by their ERC-8004 name instead of an address.
+        </li>
+        <li>
+          <strong>AI agents.</strong> An MCP server gives any agent 14 Setoff tools, with a spending limit.{" "}
+          <Link href="/docs/agents" className="text-primary hover:underline">More</Link>
+        </li>
+      </List>
       <H2 id="glance">At a glance</H2>
       <Table
         head={["", ""]}
