@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { Address, EIP1193Provider } from "viem";
 import { net } from "@/lib/config";
 import { loadSnapshot, type Snapshot } from "@/lib/data";
@@ -65,13 +65,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [noteKeys, setNoteKeys] = useState<NoteKeys>();
   const { wallets, ready: walletsReady } = useInjectedWallets();
 
-  const reload = useCallback(() => {
+  const failures = useRef(0);
+  const reload = useCallback(function load() {
     loadSnapshot()
       .then((s) => {
+        failures.current = 0;
         setSnapshot(s);
         setError(undefined);
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error & { shortMessage?: string; details?: string }) => {
+        // A blip shouldn't put up an error: retry a few times, backing off, before saying anything.
+        failures.current += 1;
+        if (failures.current <= 3) {
+          setTimeout(load, 1500 * failures.current);
+          return;
+        }
+        setError([e.shortMessage ?? e.message.split("\n")[0], e.details].filter(Boolean).join(" "));
+      });
   }, []);
 
   useEffect(() => {

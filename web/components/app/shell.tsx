@@ -174,8 +174,15 @@ function ChainError() {
   if (!error || snapshot) return null;
   return (
     <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border border-destructive/40 p-6">
-      <p className="font-medium">Couldn&apos;t read from {net.name}</p>
-      <p className="text-sm text-muted-foreground">{error}</p>
+      <p className="font-medium">Couldn&apos;t reach {net.name}</p>
+      <p className="text-sm text-muted-foreground">
+        The network didn&apos;t answer after a few tries. It&apos;s usually a brief hiccup, or a browser extension blocking requests to{" "}
+        <span className="font-mono">{new URL(net.rpc).host}</span>.
+      </p>
+      <details className="max-w-full text-xs text-muted-foreground">
+        <summary className="cursor-pointer">Details</summary>
+        <p className="mt-2 break-all font-mono">{error}</p>
+      </details>
       <Button variant="outline" onClick={reload}>
         Try again
       </Button>

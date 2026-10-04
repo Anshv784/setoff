@@ -1,4 +1,4 @@
-import { createPublicClient, getAbiItem, hexToString, http, parseEventLogs, keccak256, toHex, type Address, type Hex, type Log } from "viem";
+import { createPublicClient, fallback, getAbiItem, hexToString, http, parseEventLogs, keccak256, toHex, type Address, type Hex, type Log } from "viem";
 import { setoffAbi } from "./setoffAbi";
 import { memoAbi } from "./memoAbi";
 import { identities, MEMO, net } from "./config";
@@ -9,8 +9,12 @@ export const client = createPublicClient({
   chain: net.chain,
   // Fewer HTTP requests: reads made together go out as one multicall, and concurrent calls as one JSON-RPC batch.
   batch: { multicall: true },
-  // The public RPC rate-limits bursts: back off and retry (400ms, 800ms, … up to ~25s).
-  transport: http(net.rpc, { retryCount: 6, retryDelay: 400, batch: { batchSize: 20, wait: 16 } }),
+  // Batched first; if a batch fails at the network level (dropped, blocked, rate-limited),
+  // the same calls go again one by one, with backoff (500ms, 1s, 2s, …).
+  transport: fallback([
+    http(net.rpc, { retryCount: 1, retryDelay: 300, batch: { batchSize: 10, wait: 16 } }),
+    http(net.rpc, { retryCount: 5, retryDelay: 500 }),
+  ]),
 });
 
 export type IOURow = {
