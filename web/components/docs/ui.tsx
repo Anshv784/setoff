@@ -157,8 +157,8 @@ export function Table({ head, rows }: { head: string[]; rows: React.ReactNode[][
       <table className="w-full text-left text-sm">
         <thead className="bg-card">
           <tr>
-            {head.map((h) => (
-              <th key={h} className="border-b border-border px-4 py-3 font-medium">
+            {head.map((h, i) => (
+              <th key={i} className="border-b border-border px-4 py-3 font-medium">
                 {h}
               </th>
             ))}
