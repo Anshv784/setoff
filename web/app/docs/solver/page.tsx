@@ -54,7 +54,7 @@ export default function Page() {
       </P>
       <Code lang="bash">{`
 cd solver
-SETOFF_NETWORK=testnet SOLVER_PK=0x... npm run solve
+SETOFF_NETWORK=mainnet SOLVER_PK=0x... npm run solve
 `}</Code>
       <H2 id="anyone">Anyone can run one</H2>
       <P>

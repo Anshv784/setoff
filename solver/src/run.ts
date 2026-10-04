@@ -2,7 +2,7 @@
  * One solver pass: read the pool, pick a fundable cycle, settle it through Arc's
  * Memo contract so the cycle summary is attached to the transaction onchain.
  *
- *   SETOFF_NETWORK=testnet SOLVER_PK=0x... npm run solve
+ *   SETOFF_NETWORK=mainnet SOLVER_PK=0x... npm run solve
  */
 import { createWalletClient, encodeFunctionData, formatUnits, http, keccak256, toHex, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";

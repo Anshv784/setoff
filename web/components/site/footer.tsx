@@ -28,7 +28,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
       { label: "Arc network", href: "https://arc.io", external: true },
       { label: "Arc docs", href: "https://docs.arc.io", external: true },
       { label: "Block explorer", href: net.explorer, external: true },
-      { label: "Testnet faucet", href: "https://faucet.circle.com", external: true },
+      { label: "Get USDC (Circle)", href: "https://www.circle.com/usdc", external: true },
     ],
   },
 ];

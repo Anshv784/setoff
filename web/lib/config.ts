@@ -57,7 +57,7 @@ const networks: Record<string, Network> = {
   },
 };
 
-export const net: Network = networks[process.env.NEXT_PUBLIC_SETOFF_NETWORK ?? "testnet"]!;
+export const net: Network = networks[process.env.NEXT_PUBLIC_SETOFF_NETWORK ?? "mainnet"]!;
 
 export const tokenSymbol = (token: string) => (token.toLowerCase() === USDC.toLowerCase() ? "USDC" : "EURC");
 /** ERC-8004 names, filled in by `loadSnapshot`. They take precedence over demo labels. */

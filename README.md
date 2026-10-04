@@ -250,7 +250,7 @@ cd mcp && npm test               # MCP tools end to end (against ./scripts/local
 
 ```bash
 cd contracts
-arc-forge script script/Deploy.s.sol --rpc-url arc_testnet --broadcast --private-key $PK
+arc-forge script script/Deploy.s.sol --rpc-url https://rpc.mainnet.arc.io --broadcast --private-key $PK   # or rpc.testnet.arc.io
 ```
 
 Then set the address and deploy block in `solver/src/config.ts` and `web/lib/config.ts`, and run the solver on a schedule with `SETOFF_NETWORK` and `SOLVER_PK`.

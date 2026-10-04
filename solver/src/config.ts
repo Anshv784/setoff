@@ -50,7 +50,7 @@ export const networks = {
 } satisfies Record<string, Network>;
 
 export function network(): Network {
-  const name = (process.env.SETOFF_NETWORK ?? "testnet") as keyof typeof networks;
+  const name = (process.env.SETOFF_NETWORK ?? "mainnet") as keyof typeof networks;
   const net = networks[name];
   if (!net) throw new Error(`unknown SETOFF_NETWORK ${name}`);
   if (BigInt(net.setoff) === 0n) throw new Error(`Setoff not deployed on ${name} yet`);

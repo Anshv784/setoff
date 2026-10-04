@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy } from "lucide-react";
 
-const NETWORK = process.env.NEXT_PUBLIC_SETOFF_NETWORK ?? "testnet";
+const NETWORK = process.env.NEXT_PUBLIC_SETOFF_NETWORK ?? "mainnet";
 
 const TOOLS: [string, string][] = [
   ["get_position", "What it owes, is owed, and should deposit"],
