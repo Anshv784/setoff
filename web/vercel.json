@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/arc", "destination": "https://rpc.mainnet.arc.io/" },
+    { "source": "/api/arc-testnet", "destination": "https://rpc.testnet.arc.io/" }
+  ]
+}

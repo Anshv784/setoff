@@ -9,6 +9,8 @@ type Network = {
   name: string;
   chain: Chain;
   rpc: string;
+  /** Same-origin path the hosted site forwards to `rpc` (see vercel.json), for browsers that block the RPC host. */
+  rpcProxy?: string;
   explorer: string;
   setoff: Address;
   deployBlock: bigint;
@@ -37,6 +39,7 @@ const networks: Record<string, Network> = {
     name: "Arc Testnet",
     chain: defineChain({ ...arcTestnet, rpcUrls: { default: { http: ["https://rpc.testnet.arc.io"] } } }),
     rpc: "https://rpc.testnet.arc.io",
+    rpcProxy: "/api/arc-testnet",
     explorer: "https://explorer.testnet.arc.io",
     setoff: "0x2B90b725c370548CbA9272ccEdcaff97A34330b7",
     deployBlock: 65245868n,
@@ -48,6 +51,7 @@ const networks: Record<string, Network> = {
     name: "Arc Mainnet",
     chain: arc,
     rpc: "https://rpc.mainnet.arc.io",
+    rpcProxy: "/api/arc",
     explorer: "https://explorer.arc.io",
     setoff: "0x9C09F52cFB6f2B563FD0fC27cf585DE33dD820A6",
     deployBlock: 24244210n,

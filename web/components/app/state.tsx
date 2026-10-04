@@ -76,8 +76,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .catch((e: Error & { shortMessage?: string; details?: string }) => {
         // A blip shouldn't put up an error: retry a few times, backing off, before saying anything.
         failures.current += 1;
-        if (failures.current <= 3) {
-          setTimeout(load, 1500 * failures.current);
+        if (failures.current <= 2) {
+          setTimeout(load, 2000 * failures.current);
           return;
         }
         setError([e.shortMessage ?? e.message.split("\n")[0], e.details].filter(Boolean).join(" "));
@@ -86,7 +86,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     reload();
-    const t = setInterval(reload, REFRESH_MS);
+    // Auto-refresh, but stop hammering while reads are failing; "Try again" resumes.
+    const t = setInterval(() => failures.current <= 2 && reload(), REFRESH_MS);
     return () => clearInterval(t);
   }, [reload]);
 

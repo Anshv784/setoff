@@ -9,11 +9,15 @@ export const client = createPublicClient({
   chain: net.chain,
   // Fewer HTTP requests: reads made together go out as one multicall, and concurrent calls as one JSON-RPC batch.
   batch: { multicall: true },
-  // Batched first; if a batch fails at the network level (dropped, blocked, rate-limited),
-  // the same calls go again one by one, with backoff (500ms, 1s, 2s, …).
+  // Direct to the RPC, batched. If that fails at the network level (an extension blocking the
+  // RPC host, a dropped connection), the same batch goes through this site's own /api proxy,
+  // then one call at a time as a last resort. Few retries each, so a hard block fails fast.
   transport: fallback([
-    http(net.rpc, { retryCount: 1, retryDelay: 300, batch: { batchSize: 10, wait: 16 } }),
-    http(net.rpc, { retryCount: 5, retryDelay: 500 }),
+    http(net.rpc, { retryCount: 0, batch: { batchSize: 10, wait: 16 } }),
+    ...(net.rpcProxy && typeof window !== "undefined"
+      ? [http(`${window.location.origin}${net.rpcProxy}`, { retryCount: 2, retryDelay: 500, batch: { batchSize: 10, wait: 16 } })]
+      : []),
+    http(net.rpc, { retryCount: 2, retryDelay: 500 }),
   ]),
 });
 
