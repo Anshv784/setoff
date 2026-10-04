@@ -1,9 +1,30 @@
-import { createPublicClient, fallback, getAbiItem, hexToString, http, parseEventLogs, keccak256, toHex, type Address, type Hex, type Log } from "viem";
+import { createPublicClient, fallback, getAbiItem, type Transport, hexToString, http, parseEventLogs, keccak256, toHex, type Address, type Hex, type Log } from "viem";
 import { setoffAbi } from "./setoffAbi";
 import { memoAbi } from "./memoAbi";
 import { identities, MEMO, net } from "./config";
 import { loadIdentities } from "./identity";
 import { decodeInvoice, INVOICE_REQUEST_ID, iouId, type Invoice } from "./invoice";
+
+// Once the direct RPC fails at the network level (usually an extension blocking its host),
+// skip it for the rest of the visit so every refresh doesn't log another blocked request.
+let directBlocked = false;
+function unlessBlocked(transport: Transport): Transport {
+  return (opts) => {
+    const t = transport(opts);
+    return {
+      ...t,
+      async request(args) {
+        if (directBlocked) throw new Error("Direct RPC skipped: blocked earlier in this visit");
+        try {
+          return await t.request(args);
+        } catch (e) {
+          if ((e as { name?: string; status?: number }).name === "HttpRequestError" && !(e as { status?: number }).status) directBlocked = true;
+          throw e;
+        }
+      },
+    } as ReturnType<Transport>;
+  };
+}
 
 export const client = createPublicClient({
   chain: net.chain,
@@ -13,7 +34,7 @@ export const client = createPublicClient({
   // RPC host, a dropped connection), the same batch goes through this site's own /api proxy,
   // then one call at a time as a last resort. Few retries each, so a hard block fails fast.
   transport: fallback([
-    http(net.rpc, { retryCount: 0, batch: { batchSize: 10, wait: 16 } }),
+    unlessBlocked(http(net.rpc, { retryCount: 0, batch: { batchSize: 10, wait: 16 } })),
     ...(net.rpcProxy && typeof window !== "undefined"
       ? [http(`${window.location.origin}${net.rpcProxy}`, { retryCount: 2, retryDelay: 500, batch: { batchSize: 10, wait: 16 } })]
       : []),
