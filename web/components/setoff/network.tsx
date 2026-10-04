@@ -31,7 +31,13 @@ export function NetworkView({ snapshot, account }: { snapshot: Snapshot; account
   const [picked, setPicked] = useState<string>();
   const [view, setView] = useState<View>("before");
   const [scope, setScope] = useState<Scope>("all");
-  const source = picked && options.includes(picked) ? picked : options[0];
+  // Open on the biggest settled cycle so far (most bills; the newer one on a tie).
+  const biggest = snapshot.cycles.reduce<(typeof snapshot.cycles)[number] | undefined>(
+    (b, c) => (!b || c.iouCount > b.iouCount || (c.iouCount === b.iouCount && c.cycle > b.cycle) ? c : b),
+    undefined,
+  );
+  const biggestId = biggest && snapshot.cycles.length > 1 ? String(biggest.cycle) : undefined;
+  const source = picked && options.includes(picked) ? picked : (biggest ? String(biggest.cycle) : options[0]);
   const me = account?.toLowerCase();
 
   // React Compiler memoizes these; no manual useMemo needed.
@@ -77,6 +83,7 @@ export function NetworkView({ snapshot, account }: { snapshot: Snapshot; account
                 <span className="font-mono text-xs text-muted-foreground">#</span>
               )}
               {sourceLabel(source ?? "open")}
+              {source === biggestId && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] text-primary">Biggest so far</span>}
               <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={6} className="w-64 p-1">
@@ -87,7 +94,10 @@ export function NetworkView({ snapshot, account }: { snapshot: Snapshot; account
                   <DropdownMenuItem key={o} className="h-auto items-start gap-3 px-2.5 py-2" onClick={() => setPicked(o)}>
                     <Check className={`mt-0.5 size-4 ${o === source ? "text-primary" : "invisible"}`} aria-hidden />
                     <span className="flex flex-col">
-                      <span className="text-sm">{sourceLabel(o)}</span>
+                      <span className="inline-flex items-center gap-2 text-sm">
+                        {sourceLabel(o)}
+                        {o === biggestId && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] text-primary">Biggest so far</span>}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         {bills} bills · {o === "open" ? "not settled yet" : c?.timestamp ? fmtAgo(c.timestamp, snapshot.now) : "settled"}
                       </span>
