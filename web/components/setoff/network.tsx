@@ -148,7 +148,7 @@ export function NetworkView({ snapshot, account }: { snapshot: Snapshot; account
             aria-label={
               after
                 ? `${graph.flows.length} net transfers through Setoff, ${fmtAmount(graph.net)} ${graph.symbol} moved`
-                : `${graph.edges.length} bills between ${graph.nodes.length} parties, ${fmtAmount(graph.gross)} ${graph.symbol} owed`
+                : `${graph.billCount} bills between ${graph.nodes.length} parties, ${fmtAmount(graph.gross)} ${graph.symbol} owed`
             }
           >
             <defs>
@@ -262,7 +262,7 @@ export function NetworkView({ snapshot, account }: { snapshot: Snapshot; account
 
         <aside className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border">
-            <Stat label={after ? "Transfers" : "Bills"} value={String(after ? graph.flows.length : graph.edges.length)} accent={after} />
+            <Stat label={after ? "Transfers" : "Bills"} value={String(after ? graph.flows.length : graph.billCount)} accent={after} />
             <Stat label={`${graph.symbol} ${after ? "moved" : "owed"}`} value={fmtAmount(after ? graph.net : graph.gross)} accent={after} />
             <Stat label="Parties" value={String(graph.partyCount)} />
             <Stat label="Never moved" value={`${saved}%`} />
@@ -450,6 +450,8 @@ function build(ious: IOURow[], me?: string) {
   });
 
   return {
+    // Arrows merge bills between the same two parties; this is the real count.
+    billCount: rows.length,
     symbol: tokenSymbol(token),
     nodes,
     nets,
