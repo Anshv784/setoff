@@ -42,8 +42,8 @@ export const networks = {
     chain: arc,
     rpc: "https://rpc.mainnet.arc.io",
     explorer: "https://explorer.arc.io",
-    setoff: "0x0000000000000000000000000000000000000000", // set after mainnet deploy
-    deployBlock: 0n,
+    setoff: "0x9C09F52cFB6f2B563FD0fC27cf585DE33dD820A6",
+    deployBlock: 24244210n,
     eurc: "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1",
     identityRegistry: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
   },

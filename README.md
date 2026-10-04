@@ -10,7 +10,8 @@
 </p>
 
 <p align="center">
-  <a href="https://explorer.testnet.arc.io/address/0x2B90b725c370548CbA9272ccEdcaff97A34330b7"><img src="https://img.shields.io/badge/contract-Arc%20Testnet-1f6feb?style=for-the-badge" alt="Contract on Arc Testnet"></a>
+  <a href="https://explorer.arc.io/address/0x9C09F52cFB6f2B563FD0fC27cf585DE33dD820A6"><img src="https://img.shields.io/badge/live%20on-Arc%20Mainnet-1f6feb?style=for-the-badge" alt="Live on Arc Mainnet"></a>
+  <a href="https://explorer.testnet.arc.io/address/0x2B90b725c370548CbA9272ccEdcaff97A34330b7"><img src="https://img.shields.io/badge/also%20on-Arc%20Testnet-30363d?style=for-the-badge" alt="Also on Arc Testnet"></a>
   <a href="#how-it-works"><img src="https://img.shields.io/badge/how%20it%20works-docs-3884ff?style=for-the-badge" alt="How it works"></a>
   <a href="#for-ai-agents-mcp"><img src="https://img.shields.io/badge/AI%20agents-16%20MCP%20tools-6e56cf?style=for-the-badge" alt="16 MCP tools"></a>
   <a href="AUDIT.md"><img src="https://img.shields.io/badge/security-self%20review-e5843a?style=for-the-badge" alt="Security review"></a>
@@ -38,7 +39,7 @@ Card networks, CLS and DTCC already work this way behind the scenes. Setoff is t
 | | |
 |---|---|
 | Contract (Arc Testnet) | [`0x2B90b725c370548CbA9272ccEdcaff97A34330b7`](https://explorer.testnet.arc.io/address/0x2B90b725c370548CbA9272ccEdcaff97A34330b7) (verified) |
-| Contract (Arc Mainnet) | _deploying_ |
+| Contract (Arc Mainnet) | [`0x9C09F52cFB6f2B563FD0fC27cf585DE33dD820A6`](https://explorer.arc.io/address/0x9C09F52cFB6f2B563FD0fC27cf585DE33dD820A6) (source verified on [Sourcify](https://repo.sourcify.dev/5042/0x9C09F52cFB6f2B563FD0fC27cf585DE33dD820A6)) |
 | Dashboard | _deploying_ |
 | Docs | `/docs` on the site: architecture, contract, solver, Arc features, FAQ |
 
