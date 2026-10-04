@@ -13,3 +13,7 @@ contracts/broadcast/**/run-[0-9]*.json
 brand.md
 .anvil.log
 .local.env
+
+# Cloudflare Workers local files
+.dev.vars
+.wrangler/

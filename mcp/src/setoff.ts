@@ -267,7 +267,7 @@ export function decodeInvoice(linkOrParam: string): { iou: IOU; note: string; si
   };
 }
 
-const appUrl = (env = process.env) => (env.SETOFF_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+const appUrl = (env = process.env) => (env.SETOFF_APP_URL ?? "https://setoff.anshverma.tech").replace(/\/$/, "");
 export const invoiceLink = (param: string) => `${appUrl()}/app/bills?invoice=${param}`;
 
 async function newIOU(debtor: Address, creditor: Address, token: Token, amount: bigint, days: number): Promise<IOU> {

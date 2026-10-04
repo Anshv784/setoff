@@ -86,7 +86,7 @@ claude mcp add setoff \\
           [<C key="n">SETOFF_NETWORK</C>, <span key="n2"><C>mainnet</C>, <C>testnet</C> or <C>local</C></span>],
           [<C key="k">SETOFF_AGENT_PK</C>, "The agent's own wallet key. Leave it out for read-only tools."],
           [<C key="m">SETOFF_MAX_AMOUNT</C>, "Largest amount the agent may bill, approve, record or deposit in one action. Default 10."],
-          [<C key="u">SETOFF_APP_URL</C>, "Where invoice links should open. Default http://localhost:3000."],
+          [<C key="u">SETOFF_APP_URL</C>, "Where invoice links should open. Default https://setoff.anshverma.tech."],
         ]}
       />
 
