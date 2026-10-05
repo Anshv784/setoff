@@ -11,6 +11,8 @@ type Network = {
   rpc: string;
   /** Same-origin path the hosted site forwards to `rpc` (see vercel.json), for browsers that block the RPC host. */
   rpcProxy?: string;
+  /** Log index served by the solver Worker, so the app doesn't scan from the deploy block. */
+  indexUrl?: string;
   explorer: string;
   setoff: Address;
   deployBlock: bigint;
@@ -52,6 +54,7 @@ const networks: Record<string, Network> = {
     chain: arc,
     rpc: "https://rpc.mainnet.arc.io",
     rpcProxy: "/api/arc",
+    indexUrl: "https://setoff-solver.anshv0220.workers.dev/index",
     explorer: "https://explorer.arc.io",
     setoff: "0x9C09F52cFB6f2B563FD0fC27cf585DE33dD820A6",
     deployBlock: 24244210n,

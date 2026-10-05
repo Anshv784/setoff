@@ -1,6 +1,6 @@
 import { getAbiItem, type Address } from "viem";
 import { net } from "./config";
-import { client, logsInWindows } from "./data";
+import { client, indexedRegistry, logsClient, logsInWindows, seedLogs } from "./data";
 
 /** ERC-8004 IdentityRegistry: each identity is an NFT whose tokenURI is a registration file. */
 export const identityAbi = [
@@ -53,7 +53,11 @@ export async function loadIdentities(addresses: Address[], head: bigint): Promis
   const event = getAbiItem({ abi: identityAbi, name: "Registered" });
   const latest = new Map<string, bigint>();
   const key = `identity:${addresses.map((a) => a.toLowerCase()).sort().join(",")}`;
-  const logs = await logsInWindows(key, (fromBlock, toBlock) => client.getLogs({ address: net.identityRegistry, event, args: { owner: addresses }, fromBlock, toBlock }), head);
+  if (indexedRegistry) {
+    const want = new Set(addresses.map((a) => a.toLowerCase()));
+    seedLogs(key, indexedRegistry.to, indexedRegistry.rows.filter((r) => want.has(r.owner.toLowerCase())).map((r) => ({ args: r })));
+  }
+  const logs = await logsInWindows(key, (fromBlock, toBlock) => logsClient.getLogs({ address: net.identityRegistry, event, args: { owner: addresses }, fromBlock, toBlock }), head);
   for (const l of logs) if (l.args.owner && l.args.agentId !== undefined) latest.set(l.args.owner.toLowerCase(), l.args.agentId);
   await Promise.all(
     [...latest].map(async ([owner, agentId]) => {

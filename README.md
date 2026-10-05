@@ -178,7 +178,7 @@ Choosing the subset of IOUs that clears the most value while every net debtor st
 
 Against brute force over 200 random 10-IOU pools, the greedy clears **93.1% of the optimal value** and finds the exact optimum in **175 of 200** pools (`npm test` in `solver/`).
 
-**Hosting.** The solver runs as a Cloudflare Worker on a 30-minute cron ([`solver/src/worker.ts`](solver/src/worker.ts), [`wrangler.toml`](solver/wrangler.toml)); the key is a Worker secret. It only sends a transaction when a fundable cycle exists. The solver is trusted for liveness, not funds: anyone can run their own with `npm run solve`, and the contract checks every cycle.
+**Hosting.** The solver runs as a Cloudflare Worker on a 30-minute cron ([`solver/src/worker.ts`](solver/src/worker.ts), [`wrangler.toml`](solver/wrangler.toml)); the key is a Worker secret. It only sends a transaction when a fundable cycle exists. The same Worker also keeps a small log index (every 2 minutes, only new blocks) and serves it at `/index`, so the app loads history in one request instead of every visitor scanning the chain in 10k-block windows; the app then reads only the newest blocks itself, and falls back to a full scan if the index is unavailable. The solver is trusted for liveness, not funds: anyone can run their own with `npm run solve`, and the contract checks every cycle.
 
 ```bash
 cd solver && npx wrangler deploy && npx wrangler secret put SOLVER_PK

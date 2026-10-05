@@ -5,6 +5,12 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 SETOFF_NETWORK = "mainnet"
+# Log reads go out via the site's own RPC proxy (Vercel): the public RPC rate-limits Cloudflare's shared IPs.
+INDEX_RPC = "https://setoff.anshverma.tech/api/arc"
 
 [triggers]
-crons = ["*/30 * * * *"]
+crons = ["*/2 * * * *"]
+
+[[kv_namespaces]]
+binding = "SETOFF_INDEX"
+id = "4472ede29a964facaed355ec4e1cff78"

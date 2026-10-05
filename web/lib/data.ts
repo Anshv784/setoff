@@ -1,4 +1,4 @@
-import { createPublicClient, fallback, getAbiItem, type Transport, hexToString, http, parseEventLogs, keccak256, toHex, type Address, type Hex, type Log } from "viem";
+import { createPublicClient, fallback, formatLog, getAbiItem, type Transport, hexToString, http, parseEventLogs, keccak256, toHex, type Address, type Hex, type Log } from "viem";
 import { setoffAbi } from "./setoffAbi";
 import { memoAbi } from "./memoAbi";
 import { identities, MEMO, net } from "./config";
@@ -39,6 +39,16 @@ export const client = createPublicClient({
       ? [http(`${window.location.origin}${net.rpcProxy}`, { retryCount: 2, retryDelay: 500, batch: { batchSize: 10, wait: 16 } })]
       : []),
     http(net.rpc, { retryCount: 2, retryDelay: 500 }),
+  ]),
+});
+
+// Logs get their own unbatched client: the RPC rejects most eth_getLogs inside a JSON-RPC
+// batch, but answers a dozen separate getLogs in parallel in about a second.
+export const logsClient = createPublicClient({
+  chain: net.chain,
+  transport: fallback([
+    unlessBlocked(http(net.rpc, { retryCount: 1, retryDelay: 400 })),
+    ...(net.rpcProxy && typeof window !== "undefined" ? [http(`${window.location.origin}${net.rpcProxy}`, { retryCount: 2, retryDelay: 500 })] : []),
   ]),
 });
 
@@ -107,6 +117,33 @@ const RANGE = 10_000n;
 // Logs already fetched, per query: each refresh only asks for blocks after `to`.
 const logCache = new Map<string, { to: bigint; logs: unknown[] }>();
 
+/** Pre-fill the log cache, so the next `logsInWindows(key, …)` only fetches blocks after `to`. */
+export function seedLogs(key: string, to: bigint, logs: unknown[]) {
+  if (!logCache.has(key)) logCache.set(key, { to, logs });
+}
+
+type RawIndex = { to: string; setoff: Parameters<typeof formatLog>[0][]; memo: Parameters<typeof formatLog>[0][]; registry: { o: Address; id: Hex; b: Hex }[] };
+/** Registry registrations from the index, for identity lookups (owner, agentId, block). */
+export let indexedRegistry: { to: bigint; rows: { owner: Address; agentId: bigint }[] } | undefined;
+let indexTried = false;
+
+/** Load the Worker's log index once per visit; if it's missing or stale, the app just scans as before. */
+async function loadIndex() {
+  if (indexTried || !net.indexUrl) return;
+  indexTried = true;
+  try {
+    const idx = (await (await fetch(net.indexUrl)).json()) as RawIndex | null;
+    if (!idx) return;
+    const to = BigInt(idx.to);
+    const setoffEvents = setoffAbi.filter((x) => x.type === "event");
+    seedLogs("setoff", to, parseEventLogs({ abi: setoffEvents, logs: idx.setoff.map((l) => formatLog(l)), strict: true }));
+    seedLogs("memo", to, parseEventLogs({ abi: memoAbi, eventName: "Memo", logs: idx.memo.map((l) => formatLog(l)) }));
+    indexedRegistry = { to, rows: idx.registry.map((r) => ({ owner: r.o, agentId: BigInt(r.id) })) };
+  } catch {
+    // Index unavailable: fall back to scanning.
+  }
+}
+
 /** Logs from the deploy block to `head`, in 10k-block windows, fetched incrementally. */
 export async function logsInWindows<T>(key: string, fetchWindow: (from: bigint, to: bigint) => Promise<T[]>, head: bigint): Promise<T[]> {
   const cached = logCache.get(key) as { to: bigint; logs: T[] } | undefined;
@@ -131,6 +168,7 @@ export const NOTE_KEY_ID = keccak256(toHex("setoff:notekey:v1"));
 
 /** Everything the dashboard shows, rebuilt from onchain events. */
 export async function loadSnapshot(): Promise<Snapshot> {
+  await loadIndex();
   const [head, block, tokens] = await Promise.all([
     client.getBlockNumber({ cacheTime: 0 }),
     client.getBlock(),
@@ -157,13 +195,13 @@ export async function loadSnapshot(): Promise<Snapshot> {
     logsInWindows(
       "setoff",
       // No topic filter: Arc's RPC rejects more than ~10 topics ("requested range too large").
-      async (fromBlock, toBlock) => parseEventLogs({ abi: setoffEvents, logs: await client.getLogs({ address: net.setoff, fromBlock, toBlock }), strict: true }),
+      async (fromBlock, toBlock) => parseEventLogs({ abi: setoffEvents, logs: await logsClient.getLogs({ address: net.setoff, fromBlock, toBlock }), strict: true }),
       head,
     ),
     logsInWindows(
       "memo",
       (fromBlock, toBlock) =>
-        client.getLogs({
+        logsClient.getLogs({
           address: MEMO,
           event: getAbiItem({ abi: memoAbi, name: "Memo" }),
           args: { target: net.setoff },
