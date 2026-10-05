@@ -181,8 +181,10 @@ function LiveNumbers() {
     loadSnapshot()
       .then((s) => {
         const t = totals(s);
-        const g = Object.values(t.gross).reduce((a, b) => a + b, 0n);
-        const n = Object.values(t.netFunded).reduce((a, b) => a + b, 0n);
+        // USDC only, like the Overview: amounts in different currencies can't be added.
+        const usdc = s.tokens[0]!.toLowerCase();
+        const g = t.gross[usdc] ?? 0n;
+        const n = t.netFunded[usdc] ?? 0n;
         setData({ pct: fmtPct(savedBps(g, n)), cleared: fmtAmount(g), moved: fmtAmount(n), cycles: s.cycles.length });
       })
       .catch(() => setData(null));
