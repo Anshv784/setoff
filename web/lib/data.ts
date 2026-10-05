@@ -34,9 +34,9 @@ export const client = createPublicClient({
   // RPC host, a dropped connection), the same batch goes through this site's own /api proxy,
   // then one call at a time as a last resort. Few retries each, so a hard block fails fast.
   transport: fallback([
-    unlessBlocked(http(net.rpc, { retryCount: 0, batch: { batchSize: 20, wait: 16 } })),
+    unlessBlocked(http(net.rpc, { retryCount: 0, batch: { batchSize: 10, wait: 16 } })),
     ...(net.rpcProxy && typeof window !== "undefined"
-      ? [http(`${window.location.origin}${net.rpcProxy}`, { retryCount: 2, retryDelay: 500, batch: { batchSize: 20, wait: 16 } })]
+      ? [http(`${window.location.origin}${net.rpcProxy}`, { retryCount: 2, retryDelay: 500, batch: { batchSize: 10, wait: 16 } })]
       : []),
     http(net.rpc, { retryCount: 2, retryDelay: 500 }),
   ]),
@@ -117,8 +117,8 @@ export async function logsInWindows<T>(key: string, fetchWindow: (from: bigint, 
     windows.push([from, to > head ? head : to]);
   }
   const out: T[] = cached ? [...cached.logs] : [];
-  for (let i = 0; i < windows.length; i += 20) {
-    const batch = await Promise.all(windows.slice(i, i + 20).map(([a, b]) => fetchWindow(a, b)));
+  for (let i = 0; i < windows.length; i += 3) {
+    const batch = await Promise.all(windows.slice(i, i + 3).map(([a, b]) => fetchWindow(a, b)));
     for (const logs of batch) out.push(...logs);
   }
   logCache.set(key, { to: head > (cached?.to ?? 0n) ? head : cached!.to, logs: out });
