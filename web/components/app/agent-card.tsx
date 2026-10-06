@@ -24,7 +24,7 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="relative rounded-lg border border-border bg-background">
+      <div className="relative min-w-0 rounded-lg border border-border bg-background">
         <pre className="overflow-x-auto p-3 pr-11 font-mono text-[11px] leading-5 text-muted-foreground">{text}</pre>
         <button
           type="button"
@@ -61,7 +61,7 @@ export function AgentsPanel() {
     2,
   );
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0">
       <section aria-labelledby="what" className={`${card} lg:sticky lg:top-24`}>
         <h2 id="what" className="text-base font-medium">
           What an agent can do

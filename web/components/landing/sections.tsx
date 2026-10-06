@@ -94,7 +94,7 @@ function Window({ children, title }: { children: React.ReactNode; title: string 
     <div className="relative">
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-8 rounded-[2rem] bg-[radial-gradient(50%_50%_at_50%_50%,color-mix(in_oklch,var(--primary)_18%,transparent),transparent_70%)]"
+        className="pointer-events-none absolute -inset-y-8 inset-x-0 md:-inset-8 rounded-[2rem] bg-[radial-gradient(50%_50%_at_50%_50%,color-mix(in_oklch,var(--primary)_18%,transparent),transparent_70%)]"
       />
       <div className="relative overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-black/40">
         <div className="flex items-center gap-2 border-b border-border bg-card px-4 py-3">
@@ -348,7 +348,7 @@ function AgentTranscript() {
     <div className="relative">
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-8 rounded-[2rem] bg-[radial-gradient(50%_50%_at_50%_50%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent_70%)]"
+        className="pointer-events-none absolute -inset-y-8 inset-x-0 md:-inset-8 rounded-[2rem] bg-[radial-gradient(50%_50%_at_50%_50%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent_70%)]"
       />
       <div className="relative overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-black/40">
         <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">

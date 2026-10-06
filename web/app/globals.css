@@ -127,6 +127,8 @@
   }
   html {
     @apply font-sans;
+    /* Decorative glows must never widen the page on phones; clip (not hidden) keeps sticky headers working. */
+    overflow-x: clip;
   }
 }
 html.lenis, html.lenis body { height: auto; }

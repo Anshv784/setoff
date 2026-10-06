@@ -111,14 +111,14 @@ function CycleList({ snapshot }: { snapshot: Snapshot }) {
         const n = c.netFunded[usdcKey] ?? 0n;
         const share = g === 0n ? 0 : Number((n * 10_000n) / g) / 100;
         return (
-          <li key={String(c.cycle)} className="grid gap-4 rounded-xl border border-border bg-card p-5 md:grid-cols-[6rem_1fr_auto] md:items-center">
+          <li key={String(c.cycle)} className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-card p-5 md:grid-cols-[6rem_minmax(0,1fr)_auto] md:items-center">
             <div className="flex items-center gap-3 md:flex-col md:items-start md:gap-1">
               <span className="font-mono text-lg">#{String(c.cycle)}</span>
               <span className="text-xs text-muted-foreground" title={c.timestamp ? fmtDate(c.timestamp) : undefined}>
                 {c.timestamp ? fmtAgo(c.timestamp, snapshot.now) : "—"}
               </span>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                 <span className="text-muted-foreground">
                   {String(c.iouCount)} bills cleared ·{" "}
