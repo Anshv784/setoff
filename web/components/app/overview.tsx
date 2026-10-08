@@ -151,20 +151,20 @@ export function Overview() {
                 const g = c.gross[usdcKey] ?? 0n;
                 const n = c.netFunded[usdcKey] ?? 0n;
                 return (
-                  <li key={String(c.cycle)} className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-4 py-3">
+                  <li key={String(c.cycle)} className="grid grid-cols-[2.25rem_1fr_auto] items-center gap-3 py-3 sm:grid-cols-[3.5rem_1fr_auto] sm:gap-4">
                     <span className="font-mono text-sm">#{String(c.cycle)}</span>
                     <div className="flex min-w-0 flex-col gap-1.5">
                       <div className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
-                        <span>
+                        <span className="truncate">
                           {String(c.iouCount)} bills · {c.timestamp ? fmtAgo(c.timestamp, snapshot.now) : "—"}
                         </span>
-                        <span className="font-mono tabular-nums">
+                        <span className="hidden shrink-0 font-mono tabular-nums sm:inline">
                           {fmtAmount(n)} of {fmtAmount(g)}
                         </span>
                       </div>
                       <Meter value={n} max={g} label={`Cycle ${c.cycle}: moved ${fmtAmount(n)} of ${fmtAmount(g)} USDC`} />
                     </div>
-                    <span className="w-16 text-right font-mono text-sm tabular-nums">{fmtPct(savedBps(g, n))}</span>
+                    <span className="w-14 text-right font-mono text-sm tabular-nums sm:w-16">{fmtPct(savedBps(g, n))}</span>
                   </li>
                 );
               })}

@@ -36,8 +36,8 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
 export function SiteFooter() {
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-16 md:grid-cols-[1.4fr_repeat(3,1fr)] md:px-6">
-        <div className="flex flex-col gap-4">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-x-6 gap-y-10 px-4 py-12 md:grid-cols-[1.4fr_repeat(3,1fr)] md:gap-12 md:py-16 md:px-6">
+        <div className="col-span-2 flex flex-col gap-4 md:col-span-1">
           <Logo />
           <p className="max-w-xs text-sm leading-6 text-muted-foreground">
             Onchain netting for USDC and EURC. Settle every bill at once and move only the difference.

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, Bot, Code2, HandCoins, History, LayoutGrid, Receipt, Wallet, Waypoints } from "lucide-react";
+import { BookOpen, Bot, Code2, Ellipsis, HandCoins, History, LayoutGrid, Receipt, Wallet, Waypoints } from "lucide-react";
 import { net } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { Logo, REPO } from "@/components/site/brand";
@@ -30,13 +30,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AppNav />
       <ConnectDialog />
       <InboxNotifier />
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-10 md:px-6">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 pt-6 pb-28 md:gap-10 md:px-6 md:py-10">
         <Suspense>
           <InvoiceGate />
         </Suspense>
         <ChainError />
         {children}
       </main>
+      <MobileTabBar />
     </AppProvider>
   );
 }
@@ -91,28 +92,6 @@ function AppNav() {
           <WalletButton />
         </div>
       </div>
-      {/* Phones: the same links as a scrollable row. */}
-      <nav aria-label="App" className="overflow-x-auto border-t border-border md:hidden">
-        <div className="flex h-12 min-w-max items-center gap-1 px-2">
-          {APP_LINKS.map((l) => {
-            const active = isActive(pathname, l.href);
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                aria-current={active ? "page" : undefined}
-                className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  active ? "bg-muted text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <l.icon className="size-3.5" aria-hidden />
-                {l.label}
-                {l.href === "/app/bills" && <InboxBadge />}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
     </header>
   );
 }
@@ -199,5 +178,60 @@ export function PageHeader({ title, description, children }: { title: string; de
       </div>
       {children}
     </div>
+  );
+}
+
+/** Phones: a bottom tab bar like a native app. Main pages as tabs; the rest under "More". */
+function MobileTabBar() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const main = APP_LINKS.filter((l) => l.group === "main");
+  const more = APP_LINKS.filter((l) => l.group === "tools");
+  const moreActive = more.some((l) => isActive(pathname, l.href));
+  const tab = (active: boolean) =>
+    `relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+      active ? "text-foreground" : "text-muted-foreground"
+    }`;
+  return (
+    <>
+      {open && <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm md:hidden" onClick={() => setOpen(false)} />}
+      <nav aria-label="App" className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/90 backdrop-blur-xl md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        {open && (
+          <div className="absolute inset-x-3 bottom-full mb-3 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+            {[...more.map((l) => ({ href: l.href, label: l.label, icon: l.icon, ext: false })), { href: "/docs", label: "Docs", icon: BookOpen, ext: false }, { href: REPO, label: "Source code", icon: Code2, ext: true }].map((l) =>
+              l.ext ? (
+                <a key={l.href} href={l.href} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="flex h-12 items-center gap-3 border-b border-border px-4 text-sm last:border-0">
+                  <l.icon className="size-4 text-muted-foreground" aria-hidden /> {l.label}
+                </a>
+              ) : (
+                <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={isActive(pathname, l.href) ? "page" : undefined} className={`flex h-12 items-center gap-3 border-b border-border px-4 text-sm last:border-0 ${isActive(pathname, l.href) ? "text-primary" : ""}`}>
+                  <l.icon className="size-4 text-muted-foreground" aria-hidden /> {l.label}
+                </Link>
+              ),
+            )}
+          </div>
+        )}
+        <div className="mx-auto flex h-16 max-w-md items-stretch gap-1 px-2 py-1.5">
+          {main.map((l) => {
+            const active = isActive(pathname, l.href);
+            return (
+              <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={active ? "page" : undefined} className={tab(active)}>
+                <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${active ? "bg-primary/15 text-primary" : ""}`}>
+                  <l.icon className="size-[18px]" aria-hidden />
+                </span>
+                {l.label}
+                {l.href === "/app/bills" && <span className="absolute right-[18%] top-0.5"><InboxBadge /></span>}
+              </Link>
+            );
+          })}
+          <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className={tab(open || moreActive)}>
+            <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${open || moreActive ? "bg-primary/15 text-primary" : ""}`}>
+              <Ellipsis className="size-[18px]" aria-hidden />
+            </span>
+            More
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }

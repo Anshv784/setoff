@@ -431,11 +431,11 @@ function MoveForm({
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto]">
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-2">
             <Label htmlFor="move-amount">Amount</Label>
-            <span className="text-xs text-muted-foreground">
+            <span className="whitespace-nowrap text-xs text-muted-foreground">
               {mode === "deposit" ? "In wallet" : "In Setoff"}: {available === undefined ? "…" : fmtToken(available, token)}
             </span>
           </div>

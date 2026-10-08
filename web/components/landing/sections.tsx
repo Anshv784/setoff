@@ -9,11 +9,11 @@ import { Reveal } from "@/components/site/motion";
 export function BuiltOn() {
   return (
     <section aria-label="Built on" className="border-y border-border bg-card/30">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-14 gap-y-5 px-4 py-8 md:px-6">
-        <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Built on</span>
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-4 px-4 py-6 md:gap-x-14 md:py-8 md:px-6">
+        <span className="w-full text-center text-xs uppercase tracking-[0.18em] text-muted-foreground md:w-auto">Built on</span>
         {/* eslint-disable @next/next/no-img-element -- static SVG brand marks, no optimisation needed */}
         <a href="https://arc.io" target="_blank" rel="noreferrer" className="opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
-          <img src="/logos/arc.svg" alt="Arc" className="h-7 w-auto" />
+          <img src="/logos/arc.svg" alt="Arc" className="h-6 w-auto md:h-7" />
         </a>
         {[
           ["usdc", "USDC", "https://www.circle.com/usdc"],
@@ -24,9 +24,9 @@ export function BuiltOn() {
             href={href}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-sm text-lg font-semibold tracking-tight text-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex items-center gap-2 rounded-sm text-base font-semibold md:text-lg tracking-tight text-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <img src={`/logos/${file}.svg`} alt="" className="size-8" />
+            <img src={`/logos/${file}.svg`} alt="" className="size-6 md:size-8" />
             {name}
           </a>
         ))}
@@ -43,7 +43,7 @@ function Heading({ eyebrow, title, lead, center }: { eyebrow: string; title: str
     <Reveal className={`flex max-w-2xl flex-col gap-4 ${center ? "mx-auto items-center text-center" : ""}`}>
       <p className="text-sm font-medium text-primary">{eyebrow}</p>
       <h2 className="text-3xl font-semibold tracking-tight text-balance md:text-5xl">{title}</h2>
-      {lead && <p className="text-lg leading-8 text-muted-foreground">{lead}</p>}
+      {lead && <p className="text-base leading-7 text-muted-foreground md:text-lg md:leading-8">{lead}</p>}
     </Reveal>
   );
 }
@@ -58,7 +58,7 @@ export function WhoFor() {
     { fact: "900 → 1", caption: "calls a day, one settlement", title: "AI agents", body: "Software that buys services from other software, all day long.", href: "#agents" },
   ];
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-24 md:px-6 md:py-28">
+    <section className="mx-auto w-full max-w-6xl px-4 py-14 md:px-6 md:py-28">
       <Heading eyebrow="Who it's for" title="Anyone who owes and is owed by the same people." />
       <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it, i) => (
@@ -223,18 +223,18 @@ export function Product() {
     },
   ];
   return (
-    <section id="how" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-24 md:px-6 md:py-28">
+    <section id="how" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-14 md:px-6 md:py-28">
       <Heading eyebrow="How it works" title="Three steps, all in one app." center />
-      <div className="mt-20 flex flex-col gap-28">
+      <div className="mt-12 flex flex-col gap-16 md:mt-20 md:gap-28">
         {steps.map((s, i) => (
-          <div key={s.n} className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+          <div key={s.n} className="grid items-center gap-8 lg:grid-cols-2 lg:gap-20">
             <Reveal className={`flex flex-col gap-6 ${i % 2 ? "lg:order-2" : ""}`}>
               <div className="flex items-center gap-4">
                 <span className="font-mono text-5xl font-light tracking-tight text-primary">{s.n}</span>
                 <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" aria-hidden />
               </div>
               <h3 className="text-3xl font-semibold tracking-tight text-balance">{s.title}</h3>
-              <p className="max-w-md text-lg leading-8 text-muted-foreground">{s.body}</p>
+              <p className="max-w-md text-base leading-7 text-muted-foreground md:text-lg md:leading-8">{s.body}</p>
               <ul className="flex flex-col gap-2.5">
                 {s.points.map((p) => (
                   <li key={p} className="flex items-center gap-2.5 text-sm">
@@ -267,8 +267,8 @@ export function ArcSection() {
     { fact: "0", unit: "transfers in settle", title: "Never stuck on one wallet", body: "Settlement never sends tokens, so a frozen address can't hold up anyone else." },
   ];
   return (
-    <section id="arc" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-24 md:px-6 md:py-28">
-      <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+    <section id="arc" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-14 md:px-6 md:py-28">
+      <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
         <div className="lg:sticky lg:top-32 lg:self-start">
           <Heading
             eyebrow="Built on Arc"
@@ -309,7 +309,7 @@ export function Faq() {
     ["What if a bill is wrong?", "Dispute it. That freezes the bill until you and the other side propose the same amount still owed — or 0 to cancel it. Nobody else can decide it."],
   ];
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-24 md:px-6 md:py-28">
+    <section className="mx-auto w-full max-w-3xl px-4 py-14 md:px-6 md:py-28">
       <Heading eyebrow="Questions" title="The short answers." center />
       <div className="mt-12 flex flex-col gap-3">
         {qa.map(([q, a], i) => (
@@ -383,12 +383,12 @@ function AgentTranscript() {
 
 export function Agents() {
   return (
-    <section id="agents" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-24 md:px-6 md:py-28">
-      <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+    <section id="agents" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-14 md:px-6 md:py-28">
+      <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-20">
         <Reveal className="flex flex-col gap-6">
           <p className="text-sm font-medium text-primary">For AI agents</p>
           <h2 className="text-3xl font-semibold tracking-tight text-balance md:text-5xl">Agents can settle up too.</h2>
-          <p className="max-w-md text-lg leading-8 text-muted-foreground">
+          <p className="max-w-md text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
             Agents that buy from other agents run up hundreds of tiny bills. Setoff&apos;s MCP server lets any AI agent bill, approve, fund
             its net and check its position — in plain language, with a spending limit you set.
           </p>

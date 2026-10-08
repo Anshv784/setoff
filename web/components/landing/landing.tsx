@@ -86,16 +86,16 @@ function Hero() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_55%_at_68%_50%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent_70%)]"
         />
         <div className="relative mx-auto grid h-full w-full max-w-6xl items-center gap-8 px-4 pt-16 md:grid-cols-[1fr_1.1fr] md:px-6">
-          <div className="relative z-10 flex flex-col items-start gap-7">
+          <div className="relative z-10 flex flex-col items-start gap-5 md:gap-7">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
               <span className="size-1.5 rounded-full bg-primary" aria-hidden />
               Live on {net.name}
             </span>
-            <h1 className="text-5xl font-semibold leading-[1.04] tracking-tight md:text-6xl">
+            <h1 className="text-[2.15rem] font-semibold leading-[1.06] tracking-tight sm:text-5xl md:text-6xl">
               <span className="block md:whitespace-nowrap">Settle every bill.</span>
               <span className="block text-muted-foreground md:whitespace-nowrap">Move only the net.</span>
             </h1>
-            <p className="max-w-md text-lg leading-8 text-muted-foreground">
+            <p className="max-w-md text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
               Setoff clears what businesses owe each other in one onchain cycle. Debts that cancel out never move — you
               only fund the difference.
             </p>
@@ -109,7 +109,7 @@ function Hero() {
             </div>
             <CycleCard bills={bills} moved={moved} settled={settled} />
           </div>
-          <div className="absolute inset-0 -z-0 opacity-50 md:relative md:inset-auto md:h-[min(82svh,700px)] md:opacity-100">
+          <div className="absolute inset-x-0 bottom-0 top-[38%] -z-0 opacity-30 md:relative md:inset-auto md:h-[min(82svh,700px)] md:opacity-100">
             <GlobePlaceholder hidden={globeReady} />
             <div className={`h-full w-full transition-opacity duration-700 ${globeReady ? "opacity-100" : "opacity-0"}`}>
               <Globe onReady={() => setGlobeReady(true)} />
@@ -117,7 +117,7 @@ function Hero() {
           </div>
         </div>
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-8 flex flex-col items-center gap-2 text-xs text-muted-foreground transition-opacity"
+          className="pointer-events-none absolute inset-x-0 bottom-8 hidden flex-col items-center gap-2 text-xs text-muted-foreground transition-opacity md:flex"
           style={{ opacity: intro }}
           aria-hidden
         >
