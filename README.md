@@ -19,6 +19,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Anshv784/setoff/actions/workflows/ci.yml"><img src="https://github.com/Anshv784/setoff/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Arc-L1-0b0f19" alt="Arc">
   <img src="https://img.shields.io/badge/USDC-%2B%20EURC-2775ca" alt="USDC and EURC">
   <img src="https://img.shields.io/badge/Solidity-0.8.30-363636?logo=solidity" alt="Solidity">
